@@ -626,6 +626,84 @@ wrapper. Combine with `AppLocalizations.localizationsDelegates` and
 
 ---
 
+## RTL / text-direction testing
+
+The `flutter_to_image` package supports explicit text-direction control on
+both widget-level and screen-level APIs via the `textDirection` parameter:
+
+### Widget-level — `renderWidgetToPng` / `renderWidgetToImageResult`
+
+The `textDirection` parameter wraps the widget in a `Directionality` widget
+(default `TextDirection.ltr`):
+
+```dart
+final rtl = await renderWidgetToPng(
+  const MyWidget(),
+  size: const Size(375, 800),
+  textDirection: TextDirection.rtl,
+);
+```
+
+`ImageResult.textDirection` reflects the requested direction.
+
+### Screen-level — `renderScreenToPng` / `renderScreenToImageResult`
+
+When rendering a `MaterialApp`-rooted screen, `textDirection` is applied as a
+`Directionality` wrapper inside the MaterialApp's `builder`, **overriding** the
+locale-based directionality resolution. This lets you force RTL rendering for
+an LTR locale (e.g. `en`) to test layout mirroring without needing an RTL
+locale:
+
+```dart
+final result = await renderScreenToImageResult(
+  const MyScreen(),
+  size: const Size(375, 800),
+  locale: const Locale('en'),
+  themeMode: ThemeMode.light,
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  textDirection: TextDirection.rtl,
+);
+expect(result.textDirection, TextDirection.rtl);
+```
+
+### Screen-level matrix helpers
+
+`renderScreenGoldenMatrixFull` and `renderScreenGoldenTextScaleSweep` both
+accept and forward `textDirection`:
+
+```dart
+final rtlGoldens = await renderScreenGoldenMatrixFull(
+  (locale, theme) => MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    theme: ThemeData.light(),
+    home: ProviderScope(
+      overrides: [/* fakes */],
+      child: const MyScreen(),
+    ),
+  ),
+  locales: [const Locale('en')],
+  sizes: [const Size(375, 800)],
+  themeModes: [ThemeMode.light],
+  textDirection: TextDirection.rtl,
+  pathBuilder: (locale, size, theme) =>
+      buildGoldenPath('my_screen_rtl', locale, size, theme),
+);
+```
+
+For a direction-sensitive screen (e.g. one with a leading icon and trailing
+actions), the RTL and LTR renders should produce **different pixels**:
+
+```dart
+final ltr = await renderScreenToPng(/* textDirection: TextDirection.ltr */);
+final rtl = await renderScreenToPng(/* textDirection: TextDirection.rtl */);
+expect(rtl, isNot(equals(ltr)));
+```
+
+---
+
 ## Regenerating after intentional UI changes
 
 1. Run with `--update-goldens`:

@@ -226,6 +226,9 @@ Future<Map<String, Uint8List>> renderGoldenTextScaleSweep(
 /// `ProviderScope` / `Scaffold` ancestors by [screenBuilder] — `renderScreenToPng`
 /// only adds the `MaterialApp` root.
 ///
+/// [textDirection] is forwarded to [renderScreenToPng]; see its documentation
+/// for how it overrides locale-based directionality.
+///
 /// Must be called from within a `testWidgets` callback so that the
 /// `TestWidgetsFlutterBinding` is in the "in test" state (see
 /// [renderScreenToPng]).
@@ -237,6 +240,7 @@ Future<Map<String, Uint8List>> renderScreenGoldenMatrixFull(
   Brightness? brightness,
   double pixelRatio = kDefaultPixelRatio,
   double textScale = 1.0,
+  TextDirection textDirection = TextDirection.ltr,
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
   required List<Locale> supportedLocales,
   required GoldenPathBuilder pathBuilder,
@@ -257,6 +261,7 @@ Future<Map<String, Uint8List>> renderScreenGoldenMatrixFull(
           localizationsDelegates: localizationsDelegates,
           supportedLocales: supportedLocales,
           brightness: brightness,
+          textDirection: textDirection,
         );
         results[path] = png;
       }
@@ -287,6 +292,9 @@ Future<Map<String, Uint8List>> renderScreenGoldenMatrixFull(
 /// cell. Use [buildGoldenPathWithTextScale] for the conventional
 /// `test/goldens/<name>_<locale>_<width>x<textScale>_<theme>.png` path.
 ///
+/// [textDirection] is forwarded to [renderScreenToPng]; see its documentation
+/// for how it overrides locale-based directionality.
+///
 /// Must be called from within a `testWidgets` callback so that the
 /// `TestWidgetsFlutterBinding` is in the "in test" state (see
 /// [renderScreenToPng]).
@@ -298,6 +306,7 @@ Future<Map<String, Uint8List>> renderScreenGoldenTextScaleSweep(
   ThemeMode themeMode = ThemeMode.light,
   double pixelRatio = kDefaultPixelRatio,
   Brightness? brightness,
+  TextDirection textDirection = TextDirection.ltr,
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
   required List<Locale> supportedLocales,
   required TextScaleGoldenPathBuilder pathBuilder,
@@ -318,6 +327,7 @@ Future<Map<String, Uint8List>> renderScreenGoldenTextScaleSweep(
       localizationsDelegates: localizationsDelegates,
       supportedLocales: supportedLocales,
       brightness: brightness,
+      textDirection: textDirection,
     );
     results[path] = png;
   }

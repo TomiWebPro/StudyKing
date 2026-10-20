@@ -66,12 +66,20 @@ Future<Uint8List> renderScreenToPng(
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
   required List<Locale> supportedLocales,
   Brightness? brightness,
+  TextDirection textDirection = TextDirection.ltr,
 })
 ```
 
 The `brightness` parameter resolves `ThemeMode.system` to a concrete theme
 (light or dark), mirroring `renderWidgetToPng`. It is ignored when `themeMode`
 is explicitly `ThemeMode.light` or `ThemeMode.dark`.
+
+The `textDirection` parameter is applied as a `Directionality` wrapper inside
+the MaterialApp's builder, overriding the locale-based directionality resolution
+for screen content. This mirrors the `textDirection` on `renderWidgetToPng` and
+lets you force RTL or LTR rendering independent of locale — essential for
+catching RTL layout regressions (chevron placement, overflow on translated
+strings, touch-target alignment).
 
 The `screen` is placed as `home` in the MaterialApp. If it needs a `Scaffold`
 ancestor that it doesn't provide itself, wrap it before passing. For
@@ -80,7 +88,7 @@ dependency injection, wrap `screen` in a `ProviderScope` first.
 ### `renderScreenToImageResult`
 
 Like `renderScreenToPng` but returns an `ImageResult` that also carries
-metadata (size, pixelRatio, locale).
+metadata (size, pixelRatio, locale, textDirection).
 
 ### Golden matrix helpers
 

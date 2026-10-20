@@ -702,4 +702,180 @@ void main() {
       expect(systemDark.values.first, isNot(equals(systemLight.values.first)));
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Screen-level textDirection (RTL) coverage for matrix helpers.
+  //
+  // `renderScreenGoldenMatrixFull` and `renderScreenGoldenTextScaleSweep` gain
+  // a `textDirection` parameter that is forwarded to `renderScreenToPng`. These
+  // tests verify that RTL directionality produces different pixels from LTR
+  // for a direction-sensitive screen (leading/trailing icons swap) and that
+  // the parameter is threaded through both helpers without error.
+  // ---------------------------------------------------------------------------
+  group('renderScreenGoldenMatrixFull textDirection', () {
+    /// A Scaffold with a leading (left) red box and trailing (right) blue box.
+    /// In LTR the leading icon is on the left; in RTL it moves to the right.
+    Widget directionSensitiveScreen(Locale locale, ThemeMode theme) {
+      final themeData = theme == ThemeMode.dark ? ThemeData.dark() : ThemeData.light();
+      return Theme(
+        data: themeData,
+        child: Scaffold(
+          appBar: AppBar(
+            leading: const SizedBox(
+              width: 30,
+              height: 30,
+              child: ColoredBox(color: Colors.red),
+            ),
+            actions: const [
+              SizedBox(
+                width: 30,
+                height: 30,
+                child: ColoredBox(color: Colors.blue),
+              ),
+            ],
+          ),
+          body: const Center(child: Text('Screen')),
+        ),
+      );
+    }
+
+    testWidgets('RTL produces different bytes from LTR for direction-sensitive screens',
+        (tester) async {
+      final ltr = await renderScreenGoldenMatrixFull(
+        directionSensitiveScreen,
+        locales: [const Locale('en')],
+        sizes: [const Size(375, 800)],
+        themeModes: [ThemeMode.light],
+        pixelRatio: 1.0,
+        textDirection: TextDirection.ltr,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('dir_ltr', locale, size, theme),
+      );
+
+      final rtl = await renderScreenGoldenMatrixFull(
+        directionSensitiveScreen,
+        locales: [const Locale('en')],
+        sizes: [const Size(375, 800)],
+        themeModes: [ThemeMode.light],
+        pixelRatio: 1.0,
+        textDirection: TextDirection.rtl,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('dir_rtl', locale, size, theme),
+      );
+
+      expect(ltr.values.first, isNotEmpty);
+      expect(rtl.values.first, isNotEmpty);
+      expect(rtl.values.first, isNot(equals(ltr.values.first)));
+    });
+
+    testWidgets('textDirection threads through without error (default LTR)', (tester) async {
+      final matrix = await renderScreenGoldenMatrixFull(
+        directionSensitiveScreen,
+        locales: [const Locale('en')],
+        sizes: [const Size(375, 800)],
+        themeModes: [ThemeMode.light, ThemeMode.dark],
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('dir_default', locale, size, theme),
+      );
+
+      expect(matrix.length, 2);
+      for (final entry in matrix.entries) {
+        expect(entry.value, isNotEmpty);
+        expect(entry.value[0], 0x89);
+      }
+    });
+  });
+
+  group('renderScreenGoldenTextScaleSweep textDirection', () {
+    Widget directionSensitiveScreen(Locale locale, ThemeMode theme) {
+      final themeData = theme == ThemeMode.dark ? ThemeData.dark() : ThemeData.light();
+      return Theme(
+        data: themeData,
+        child: Scaffold(
+          appBar: AppBar(
+            leading: const SizedBox(
+              width: 30,
+              height: 30,
+              child: ColoredBox(color: Colors.red),
+            ),
+            actions: const [
+              SizedBox(
+                width: 30,
+                height: 30,
+                child: ColoredBox(color: Colors.blue),
+              ),
+            ],
+          ),
+          body: const Center(child: Text('Screen')),
+        ),
+      );
+    }
+
+    testWidgets('RTL produces different bytes from LTR for direction-sensitive screens',
+        (tester) async {
+      final ltr = await renderScreenGoldenTextScaleSweep(
+        directionSensitiveScreen,
+        locale: const Locale('en'),
+        size: const Size(375, 800),
+        textScales: [1.0],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        textDirection: TextDirection.ltr,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, textScale, theme) =>
+            buildGoldenPathWithTextScale('sweep_dir_ltr', locale, size, textScale, theme),
+      );
+
+      final rtl = await renderScreenGoldenTextScaleSweep(
+        directionSensitiveScreen,
+        locale: const Locale('en'),
+        size: const Size(375, 800),
+        textScales: [1.0],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        textDirection: TextDirection.rtl,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, textScale, theme) =>
+            buildGoldenPathWithTextScale('sweep_dir_rtl', locale, size, textScale, theme),
+      );
+
+      expect(ltr.values.first, isNotEmpty);
+      expect(rtl.values.first, isNotEmpty);
+      expect(rtl.values.first, isNot(equals(ltr.values.first)));
+    });
+
+    testWidgets('threads through without error for multiple scales', (tester) async {
+      final sweeps = await renderScreenGoldenTextScaleSweep(
+        directionSensitiveScreen,
+        locale: const Locale('en'),
+        size: const Size(375, 800),
+        textScales: [1.0, 1.5, 2.0],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        textDirection: TextDirection.rtl,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, textScale, theme) =>
+            buildGoldenPathWithTextScale('sweep_rtl', locale, size, textScale, theme),
+      );
+
+      expect(sweeps.length, 3);
+      for (final entry in sweeps.entries) {
+        expect(entry.value, isNotEmpty);
+        expect(entry.key, endsWith('.png'));
+      }
+      expect(sweeps.keys.where((k) => k.contains('x1.0')), hasLength(1));
+      expect(sweeps.keys.where((k) => k.contains('x1.5')), hasLength(1));
+      expect(sweeps.keys.where((k) => k.contains('x2.0')), hasLength(1));
+    });
+  });
 }

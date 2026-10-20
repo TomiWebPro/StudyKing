@@ -488,6 +488,133 @@ void main() {
       expect(result.textDirection, TextDirection.ltr);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Screen-level textDirection (RTL) coverage.
+  //
+  // `renderScreenToPng`/`renderScreenToImageResult` gained a `textDirection`
+  // parameter to mirror the widget-level API. The `Directionality` wrapper is
+  // placed inside the MaterialApp's builder so it overrides the locale-based
+  // [Directionality] resolution for screen content. These tests verify:
+  //   - `ImageResult.textDirection` reflects the requested direction.
+  //   - An explicit `textDirection: rtl` produces different pixels from `ltr`
+  //     for a direction-sensitive screen (leading/trailing icons swap).
+  //   - RTL locale + rtl directionality vs LTR locale + ltr directionality
+  //     produce different PNGs.
+  // ---------------------------------------------------------------------------
+  group('renderScreenToPng textDirection (RTL)', () {
+    /// A Scaffold with a leading (left) red box and trailing (right) blue box.
+    /// In LTR the red is on the left; in RTL the red moves to the right.
+    Widget leadingTrailingAppBar() {
+      return Scaffold(
+        appBar: AppBar(
+          leading: const SizedBox(
+            width: 30,
+            height: 30,
+            child: ColoredBox(color: Colors.red),
+          ),
+          actions: const [
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: ColoredBox(color: Colors.blue),
+            ),
+          ],
+        ),
+        body: const Center(child: Text('Screen')),
+      );
+    }
+
+    testWidgets('ImageResult reflects the requested textDirection', (tester) async {
+      final result = await renderScreenToImageResult(
+        leadingTrailingAppBar(),
+        size: const Size(375, 800),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        textDirection: TextDirection.rtl,
+      );
+
+      expect(result.pngBytes, isNotEmpty);
+      expect(result.textDirection, TextDirection.rtl);
+    });
+
+    testWidgets('default textDirection on screen render is LTR', (tester) async {
+      final result = await renderScreenToImageResult(
+        leadingTrailingAppBar(),
+        size: const Size(375, 800),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      expect(result.textDirection, TextDirection.ltr);
+    });
+
+    testWidgets('RTL produces different bytes from LTR for a direction-sensitive screen',
+        (tester) async {
+      final ltr = await renderScreenToPng(
+        leadingTrailingAppBar(),
+        size: const Size(375, 800),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        textDirection: TextDirection.ltr,
+      );
+
+      final rtl = await renderScreenToPng(
+        leadingTrailingAppBar(),
+        size: const Size(375, 800),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        textDirection: TextDirection.rtl,
+      );
+
+      expect(ltr, isNotEmpty);
+      expect(rtl, isNotEmpty);
+      // The AppBar leading/trailing icons swap sides, so pixels differ.
+      expect(rtl, isNot(equals(ltr)));
+    });
+
+    testWidgets('can render RTL twice without window state bleeding between calls',
+        (tester) async {
+      final first = await renderScreenToPng(
+        leadingTrailingAppBar(),
+        size: const Size(375, 800),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        textDirection: TextDirection.rtl,
+      );
+
+      final second = await renderScreenToPng(
+        leadingTrailingAppBar(),
+        size: const Size(1200, 800),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.dark,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        textDirection: TextDirection.ltr,
+      );
+
+      expect(first, isNotEmpty);
+      expect(second, isNotEmpty);
+      // Different size + theme + directionality → different output.
+      expect(second, isNot(equals(first)));
+    });
+  });
 }
 
 /// Decodes PNG bytes back into a ui.Image so we can check dimensions.

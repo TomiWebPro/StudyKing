@@ -272,7 +272,11 @@ Future<ImageResult> renderWidgetToImageResult(
 /// expects should be present in [screen] itself.
 ///
 /// Text direction is driven by [locale] through MaterialApp's built-in
-/// [Directionality] resolution.
+/// [Directionality] resolution, **unless** [textDirection] is provided, in
+/// which case it is applied as a `Directionality` wrapper inside the
+/// MaterialApp's builder, overriding the locale-based resolution for screen
+/// content. This mirrors the [renderWidgetToPng] parameter and lets golden
+/// tests force a screen to render in LTR or RTL independent of locale.
 ///
 /// [brightness] is used to resolve [ThemeMode.system] to a concrete
 /// [ThemeData] (light or dark), mirroring [renderWidgetToPng]. When
@@ -291,6 +295,7 @@ Future<Uint8List> renderScreenToPng(
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
   required List<Locale> supportedLocales,
   Brightness? brightness,
+  TextDirection textDirection = TextDirection.ltr,
 }) async {
   final result = await renderScreenToImageResult(
     screen,
@@ -302,6 +307,7 @@ Future<Uint8List> renderScreenToPng(
     localizationsDelegates: localizationsDelegates,
     supportedLocales: supportedLocales,
     brightness: brightness,
+    textDirection: textDirection,
   );
   return result.pngBytes;
 }
@@ -322,6 +328,7 @@ Future<ImageResult> renderScreenToImageResult(
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
   required List<Locale> supportedLocales,
   Brightness? brightness,
+  TextDirection textDirection = TextDirection.ltr,
 }) async {
   // Resolve theme data based on themeMode / brightness, mirroring the
   // widget-level [renderWidgetToImageResult] so that [ThemeMode.system]
@@ -342,6 +349,11 @@ Future<ImageResult> renderScreenToImageResult(
   // localisation delegates — exactly the wrapper every screen-level golden
   // test currently hand-rolls. The [screen] is placed as `home`; callers wrap
   // it in ProviderScope / Scaffold as needed before passing it in.
+  //
+  // [textDirection] is applied as a `Directionality` wrapper inside the
+  // builder so it overrides the MaterialApp's locale-based [Directionality]
+  // resolution for screen content — mirroring how [renderWidgetToPng] uses
+  // its `textDirection` parameter for widget-level renders.
   final app = MaterialApp(
     locale: locale,
     localizationsDelegates: localizationsDelegates,
@@ -353,13 +365,17 @@ Future<ImageResult> renderScreenToImageResult(
       data: MediaQuery.of(context).copyWith(
         textScaler: TextScaler.linear(textScale),
       ),
-      child: child!,
+      child: Directionality(
+        textDirection: textDirection,
+        child: child!,
+      ),
     ),
     home: screen,
   );
 
   // Delegate to renderWidgetToImageResult for the pixel capture. We pass
-  // locale/themeMode/textScale so the returned ImageResult metadata is correct.
+  // locale/themeMode/textScale/textDirection so the returned ImageResult
+  // metadata is correct.
   // The MaterialApp's own Theme/MediaQuery/Localizations override the bare
   // wrappers that renderWidgetToImageResult applies externally — this is
   // intentional and matches the existing per-screen golden test pattern.
@@ -371,6 +387,7 @@ Future<ImageResult> renderScreenToImageResult(
     themeMode: themeMode,
     textScale: textScale,
     brightness: brightness,
+    textDirection: textDirection,
   );
 }
 
