@@ -242,6 +242,81 @@ every screen golden test currently hand-rolls (see
 
 ---
 
+## Image diff helper
+
+### `compareImages`
+
+When a golden test fails, `matchesGoldenFile` reports the numeric pixel
+count but does **not** produce a visual diff. The `compareImages` helper
+fills that gap so agents and CI can attach a diff PNG to an issue — exactly
+as called for in `docs/vision_next_term.md` §1.1 ("visual diffs are
+attached to issues: expected vs actual PNG + diff"):
+
+```dart
+Future<ImageComparisonResult> compareImages(
+  Uint8List expected,
+  Uint8List actual, {
+  Color highlightColor = Colors.red,
+  double tolerance = 0.0,
+})
+```
+
+- **`expected`**, **`actual`** — PNG-encoded byte arrays (e.g. from
+  `renderWidgetToPng` or `renderScreenToPng`). Both must have the same
+  dimensions.
+- **`highlightColor`** — colour used to paint differing pixels in the
+  diff image (default `Colors.red`).
+- **`tolerance`** — acceptable *fraction* of differing pixels (0.0–1.0).
+  When `differingPixels / totalPixels ≤ tolerance`, `matches` is `true`.
+  Use a small value (e.g. `0.05`) to tolerate anti-aliasing jitter between
+  golden regeneration runs.
+
+Returns an `ImageComparisonResult`:
+
+| Field | Type | Description |
+|---|---|---|
+| `matches` | `bool` | `true` if the diff is within `tolerance` |
+| `differingPixels` | `int` | exact count of differing pixels |
+| `totalPixels` | `int` | total pixels compared |
+| `percentDifferent` | `double` | 0.0–100.0 percentage |
+| `diffPng` | `Uint8List` | PNG where matching pixels are copied from `expected` and differing pixels are highlighted |
+| `width` | `int` | width of the compared images |
+| `height` | `int` | height of the compared images |
+
+### Usage — producing a diff PNG for an issue
+
+```dart
+final expected = await renderScreenToPng(
+  const MyScreen(),
+  size: const Size(375, 800),
+  locale: const Locale('en'),
+  themeMode: ThemeMode.light,
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+);
+// ... after a UI change ...
+final actual = await renderScreenToPng(/* same args */);
+
+final result = await compareImages(expected, actual);
+if (!result.matches) {
+  // Save result.diffPng + expected + actual as issue attachments.
+  print('${result.differingPixels}/${result.totalPixels} pixels differ '
+        '(${result.percentDifferent.toStringAsFixed(2)}%)');
+}
+```
+
+Must be called from within a `testWidgets` callback (same as
+`renderWidgetToPng`) because PNG decoding and PNG encoding perform real
+engine async work that the test binding's FakeAsync clock cannot drive.
+
+The package's own test suite (`packages/flutter_to_image/test/diff_test.dart`)
+verifies: identical images match, different images differ, diff PNG is a
+valid PNG with correct dimensions, tolerance boundary behaviour, custom
+highlight colour, dimension-mismatch throws `StateError`, and `percentDifferent`
+is correct for 0 % and 100 % diffs.
+
+---
+
 ## Golden file path convention
 
 ```

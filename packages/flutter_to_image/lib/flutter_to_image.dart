@@ -6,7 +6,10 @@
 /// helpers [renderGoldenMatrix], [renderGoldenMatrixFull],
 /// [renderGoldenTextScaleSweep], [renderScreenGoldenMatrixFull], and
 /// [renderScreenGoldenTextScaleSweep].
+///
+/// Also exports the visual-diff API: [compareImages], [ImageComparisonResult].
 library;
 
+export 'src/diff.dart';
 export 'src/renderer.dart';
 export 'src/golden_matrix.dart';

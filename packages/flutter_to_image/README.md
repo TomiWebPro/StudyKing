@@ -190,6 +190,37 @@ final sweeps = await renderScreenGoldenTextScaleSweep(
 // sweeps now contains 3 entries (one per text scale).
 ```
 
+### `compareImages`
+
+Compares two PNG images pixel-by-pixel and returns an `ImageComparisonResult`
+that includes a visual diff PNG — useful for attaching "expected vs actual"
+diff images to issues (per `vision_next_term.md` §1.1):
+
+```dart
+Future<ImageComparisonResult> compareImages(
+  Uint8List expected,
+  Uint8List actual, {
+  Color highlightColor = Colors.red,
+  double tolerance = 0.0,
+})
+```
+
+The returned `ImageComparisonResult` carries:
+- `matches` — `true` if the diff is within `tolerance` (a fraction 0.0–1.0)
+- `differingPixels` / `totalPixels` — exact counts
+- `percentDifferent` — 0.0–100.0 percentage
+- `diffPng` — a PNG where matching pixels come from `expected` and differing pixels
+  are highlighted with `highlightColor`
+- `width` / `height` — dimensions of the compared images
+
+```dart
+final result = await compareImages(expectedPng, actualPng, tolerance: 0.05);
+if (!result.matches) {
+  // result.diffPng is a visual diff you can attach to an issue.
+  print('${result.differingPixels} pixels differ (${result.percentDifferent}%)');
+}
+```
+
 ## Usage in a golden test
 
 ```dart
