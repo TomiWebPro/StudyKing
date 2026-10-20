@@ -92,8 +92,13 @@ class LlmResponseCache {
       // Answer evaluation is stable per question and answer.
       'evaluation' || 'teaching_evaluation' => CacheConfig.evaluationCacheTtl,
       // Generated artifacts are deterministic for a given source and prompt.
+      // 'question_variants' is the feature string used by
+      // QuestionVariantService.generateVariants() (prep-category, §4.1).
+      // 'question_variant_generation' is retained for cache-key continuity
+      // with entries created before the feature-string alignment fix.
       'generation' ||
       'question_generation' ||
+      'question_variants' ||
       'question_variant_generation' ||
       'flashcard_generation' ||
       'concept_map_generation' ||

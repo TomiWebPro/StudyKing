@@ -53,8 +53,25 @@ enum LlmTaskType {
     if (f.contains('classif') || f.contains('topic_extraction')) {
       return LlmTaskType.classification;
     }
+    // Vision Next-Term §4.1 prep features: all map to background so the
+    // LlmUsageMeter records them with a prep-category taskType (not null),
+    // keeping spend attributable to PrepBudgetService categories.
+    //
+    // This check runs BEFORE the 'generation' block below so that prep
+    // feature strings containing 'variant_generation' (e.g.
+    // 'question_variant_generation') are not caught by the generation
+    // substring check and misclassified as live 'generation' tokens.
+    // 'question_variant_generation' is included explicitly for backwards-
+    // compatibility with any call site still using the older feature string.
+    if (f.contains('pdf_ingestion') ||
+        f.contains('question_variants') ||
+        f.contains('question_variant_generation') ||
+        f.contains('lesson_prep') ||
+        f.contains('embeddings') ||
+        f.contains('mastery_refresh')) {
+      return LlmTaskType.background;
+    }
     if (f.contains('question_generation') ||
-        f.contains('variant_generation') ||
         f.contains('flashcard_generation') ||
         f.contains('study_guide') ||
         f.contains('concept_map') ||
@@ -76,16 +93,6 @@ enum LlmTaskType {
       return LlmTaskType.tutor;
     }
     if (f.contains('background') || f.contains('idle')) {
-      return LlmTaskType.background;
-    }
-    // Vision Next-Term §4.1 prep features: all map to background so the
-    // LlmUsageMeter records them with a prep-category taskType (not null),
-    // keeping spend attributable to PrepBudgetService categories.
-    if (f.contains('pdf_ingestion') ||
-        f.contains('question_variants') ||
-        f.contains('lesson_prep') ||
-        f.contains('embeddings') ||
-        f.contains('mastery_refresh')) {
       return LlmTaskType.background;
     }
     return null;

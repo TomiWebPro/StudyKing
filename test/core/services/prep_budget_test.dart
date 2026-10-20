@@ -559,6 +559,55 @@ void main() {
           meter.getTotalTokens());
     });
 
+    // Issue: prep-question-variant-generation-tokens-misattributed
+    //
+    // Vision §0 token principle: when QuestionVariantService.generateVariants()
+    // runs in prep context (feature: 'question_variants'), LlmTaskType.fromFeature
+    // maps 'question_variants' → LlmTaskType.background, so _recordCompletion
+    // records actual tokens with taskType: 'background' — NOT 'generation' (a
+    // live category). PrepBudgetService.totalLiveTokens() must therefore
+    // exclude those tokens, and totalPrepTokens() must include them.
+    test('question_variants tokens (recorded as background) excluded from totalLiveTokens', () {
+      final meter = LlmUsageMeter();
+      // Simulates actual LLM tokens from a prep-context
+      // QuestionVariantService.generateVariants() call:
+      // feature 'question_variants' → fromFeature → background taskType.
+      meter.recordUsage(
+        id: 'qv_actual',
+        feature: 'question_variants',
+        modelId: 'gpt-4o',
+        inputTokens: 5000,
+        outputTokens: 3000,
+        taskType: 'background', // what fromFeature('question_variants') resolves to
+      );
+      // A live teaching call must remain counted as live.
+      meter.recordUsage(
+        id: 'live_tutor',
+        feature: 'tutor',
+        modelId: 'gpt-4o',
+        inputTokens: 4000,
+        outputTokens: 2000,
+        taskType: 'teaching',
+      );
+
+      final service = PrepBudgetService(meter: meter);
+
+      // The 8k prep tokens are under 'background', a PrepCategory key.
+      expect(service.totalPrepTokens(), 8000);
+      // Live tokens should only contain the 6k teaching record — NOT the
+      // question-variant actuals that were misattributed before the fix.
+      expect(service.totalLiveTokens(), 6000);
+      // Partition holds: 8k prep + 6k live = 14k total.
+      expect(service.totalPrepTokens() + service.totalLiveTokens(),
+          meter.getTotalTokens());
+
+      // Also verify the task-type breakdown: no tokens under 'generation'.
+      final byType = meter.getTotalTokensPerTaskType();
+      expect(byType['generation'], isNull);
+      expect(byType['question_variants'], isNull);
+      expect(byType['background'], greaterThan(0));
+    });
+
     test('totalPrepTokens + totalLiveTokens partitions every meter token', () {
       final meter = LlmUsageMeter();
       meter.recordUsage(

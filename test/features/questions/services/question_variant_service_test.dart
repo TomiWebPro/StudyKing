@@ -7,6 +7,9 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/questions/services/question_variant_service.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
+import 'package:studyking/core/services/llm_usage_meter.dart';
+import 'package:studyking/core/services/prep_budget.dart';
 
 /// In-memory fake of [QuestionRepository] that bypasses Hive.
 class FakeQuestionRepository extends QuestionRepository {
@@ -65,6 +68,7 @@ class FakeLlmService extends LlmService {
   final List<Result<String>> queuedResponses;
   int callCount = 0;
   final List<String> requestedMessages = [];
+  final List<String> requestedFeatures = [];
 
   FakeLlmService({this.queuedResponses = const []})
       : super(
@@ -86,6 +90,7 @@ class FakeLlmService extends LlmService {
     String feature = 'general',
   }) async {
     requestedMessages.add(message);
+    requestedFeatures.add(feature);
     final response = queuedResponses[callCount];
     callCount++;
     return response;
@@ -409,6 +414,81 @@ void main() {
         familyResult.data!.map((q) => q.id),
         contains(source.id),
       );
+    });
+  });
+
+  group('QuestionVariantService feature attribution', () {
+    // Regression test for prep-question-variant-generation-tokens-misattributed:
+    // QuestionVariantService.generateVariants() must use feature: 'question_variants'
+    // (not 'question_variant_generation') so that LlmTaskType.fromFeature maps it
+    // to LlmTaskType.background — a prep-category key — and actual LLM tokens
+    // are attributed to prep, never live 'generation'.
+    test('generateVariants passes feature "question_variants" to LLM service',
+        () async {
+      final repo = FakeQuestionRepository();
+      final llm = FakeLlmService(
+        queuedResponses: [Result.success(validVariantJson)],
+      );
+      final service = QuestionVariantService(
+        questionRepo: repo,
+        llmService: llm,
+        modelId: 'model-x',
+      );
+
+      await service.generateVariants(buildSourceQuestion(), count: 1);
+
+      expect(llm.requestedFeatures, isNotEmpty);
+      expect(llm.requestedFeatures, everyElement('question_variants'));
+    });
+
+    test('feature question_variants maps to background, never generation', () {
+      expect(LlmTaskType.fromFeature('question_variants'),
+          equals(LlmTaskType.background));
+    });
+
+    test('"question_variant_generation" also maps to background (defensive)', () {
+      // The old feature string must not misclassify as generation even if
+      // it leaks through any call site.
+      expect(LlmTaskType.fromFeature('question_variant_generation'),
+          equals(LlmTaskType.background));
+    });
+
+    test(
+        'PrepBudgetService totalLiveTokens excludes question_variants actuals',
+        () {
+      // Simulate the full chain: fromFeature('question_variants') → background
+      // → _recordCompletion records taskType 'background' on the meter.
+      final meter = LlmUsageMeter();
+      final taskType = LlmTaskType.fromFeature('question_variants')?.name;
+      meter.recordUsage(
+        id: 'qv_actual',
+        feature: 'question_variants',
+        modelId: 'gpt-4o',
+        inputTokens: 5000,
+        outputTokens: 3000,
+        taskType: taskType,
+      );
+      // A concurrent live teaching call inflates the live bucket.
+      meter.recordUsage(
+        id: 'live_tutor',
+        feature: 'tutor',
+        modelId: 'gpt-4o',
+        inputTokens: 4000,
+        outputTokens: 2000,
+        taskType: 'teaching',
+      );
+
+      final budget = PrepBudgetService(meter: meter);
+
+      // Actual question-variant tokens are prep (under 'background'),
+      // so live tokens do NOT include them.
+      expect(budget.totalPrepTokens(), 8000);
+      expect(budget.totalLiveTokens(), 6000);
+      expect(budget.totalPrepTokens() + budget.totalLiveTokens(),
+          meter.getTotalTokens());
+
+      // No tokens leaked into the live 'generation' bucket.
+      expect(meter.getTotalTokensPerTaskType()['generation'], isNull);
     });
   });
 

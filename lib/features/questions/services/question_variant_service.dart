@@ -74,7 +74,7 @@ class QuestionVariantService {
       final llmResult = await _llmService.chat(
         message: prompt,
         modelId: _modelId,
-        feature: 'question_variant_generation',
+        feature: 'question_variants',
         localeName: _localeName,
       );
 

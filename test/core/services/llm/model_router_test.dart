@@ -229,6 +229,29 @@ void main() {
       expect(LlmTaskType.fromFeature('mastery_refresh'), equals(LlmTaskType.background));
     });
 
+    test('maps question_variant_generation to background (not generation)', () {
+      // Regression guard: QuestionVariantService previously used the feature
+      // string 'question_variant_generation', which fromFeature misclassified
+      // as LlmTaskType.generation (live) because 'variant_generation' matched
+      // the generation block before the prep-category block. The prep
+      // features now check first, so even the older feature string maps to
+      // background — actual prep tokens are never counted as live generation
+      // (Vision Next-Term §0 token principle, §4.4 ratio).
+      expect(
+        LlmTaskType.fromFeature('question_variant_generation'),
+        equals(LlmTaskType.background),
+      );
+      expect(
+        LlmTaskType.fromFeature('question_variants'),
+        equals(LlmTaskType.background),
+      );
+      // Sanity: genuine live generation features still map to generation.
+      expect(
+        LlmTaskType.fromFeature('question_generation'),
+        equals(LlmTaskType.generation),
+      );
+    });
+
     test('returns null for unrecognized features', () {
       expect(LlmTaskType.fromFeature('weather_lookup'), isNull);
     });

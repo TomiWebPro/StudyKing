@@ -154,6 +154,7 @@ void main() {
       // Generation call sites.
       for (final feature in [
         'question_generation',
+        'question_variants',
         'question_variant_generation',
         'flashcard_generation',
         'concept_map_generation',
