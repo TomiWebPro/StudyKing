@@ -75,6 +75,15 @@ class Source extends HiveObject {
   @HiveField(22, defaultValue: '')
   final String generatedConceptMapId;
 
+  /// JSON-serialized figure metadata (bytes base64-encoded) extracted from the
+  /// source. Figures are discovered during extraction (PDF `/XObject` images or
+  /// embedded office assets) and surfaced in the source-revisit UX so students
+  /// and the mentor agent can ground chart reconstruction on the original
+  /// visuals (Vision Next-Term §4.1 / §24). Mirrors the `chunks` pattern: a
+  /// single text column parsed via [SourceFigure.parse].
+  @HiveField(23, defaultValue: '')
+  final String figuresJson;
+
   Source({
     required this.id,
     required this.title,
@@ -99,6 +108,7 @@ class Source extends HiveObject {
     this.generatedFlashcardIds = const [],
     this.generatedStudyGuideId = '',
     this.generatedConceptMapId = '',
+    this.figuresJson = '',
   });
 
   ProcessingStatus get statusEnum => ProcessingStatus.values.firstWhere(
@@ -147,6 +157,7 @@ class Source extends HiveObject {
     'generatedFlashcardIds': generatedFlashcardIds,
     'generatedStudyGuideId': generatedStudyGuideId,
     'generatedConceptMapId': generatedConceptMapId,
+    'figuresJson': figuresJson,
   };
 
   factory Source.fromJson(Map<String, dynamic> json) => Source(
@@ -182,6 +193,7 @@ class Source extends HiveObject {
         [],
     generatedStudyGuideId: json['generatedStudyGuideId'] as String? ?? '',
     generatedConceptMapId: json['generatedConceptMapId'] as String? ?? '',
+    figuresJson: json['figuresJson'] as String? ?? '',
   );
 
   Source copyWith({
@@ -208,6 +220,7 @@ class Source extends HiveObject {
     List<String>? generatedFlashcardIds,
     String? generatedStudyGuideId,
     String? generatedConceptMapId,
+    String? figuresJson,
   }) {
     return Source(
       id: id ?? this.id,
@@ -233,6 +246,7 @@ class Source extends HiveObject {
       generatedFlashcardIds: generatedFlashcardIds ?? this.generatedFlashcardIds,
       generatedStudyGuideId: generatedStudyGuideId ?? this.generatedStudyGuideId,
       generatedConceptMapId: generatedConceptMapId ?? this.generatedConceptMapId,
+      figuresJson: figuresJson ?? this.figuresJson,
     );
   }
 }

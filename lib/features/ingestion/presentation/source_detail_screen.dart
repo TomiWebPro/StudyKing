@@ -12,6 +12,7 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/data/models/source_model.dart';
+import 'package:studyking/core/data/models/source_figure.dart';
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/providers/ingestion_providers.dart';
@@ -300,6 +301,27 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     return null;
   }
 
+  /// Renders the figures (charts, diagrams, images) discovered during
+  /// ingestion, if any. Each figure shows its image, a page reference, and
+  /// an optional caption. Invalid/corrupt bytes are caught via
+  /// [Image.memory] `errorBuilder` so the whole screen never crashes.
+  Widget _buildFiguresSection(Source source, AppLocalizations l10n) {
+    final figures = SourceFigure.parse(source.figuresJson);
+    if (figures.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: l10n.figuresCount(figures.length)),
+        ...figures.asMap().entries.map((entry) => _FigureCard(
+              figure: entry.value,
+              index: entry.key + 1,
+              locale: l10n.localeName,
+            )),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -511,6 +533,9 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                     ),
                   ),
                 ),
+
+                const SizedBox(height: 16),
+                _buildFiguresSection(source, l10n),
 
                 const SizedBox(height: 16),
                 _SectionHeader(title: l10n.sourceContentCount(chunks.length)),
@@ -791,6 +816,87 @@ class _SectionHeader extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+}
+
+/// A card widget that renders a single [SourceFigure] (chart, diagram, image)
+/// extracted from an ingested source.
+class _FigureCard extends StatelessWidget {
+  final SourceFigure figure;
+  final int index;
+  final String locale;
+
+  const _FigureCard({
+    required this.figure,
+    required this.index,
+    required this.locale,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final caption = figure.caption.isNotEmpty
+        ? figure.caption
+        : l10n.figureLabel(index);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (figure.hasBytes)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              child: Image.memory(
+                figure.bytes,
+                width: double.infinity,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(Icons.broken_image,
+                            color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.figureImageUnavailable,
+                          style: TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  caption,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.figurePageReference(figure.pageNumber),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

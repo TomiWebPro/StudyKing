@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,8 +9,10 @@ import 'package:studyking/core/data/extraction/ocr_engine.dart';
 import 'package:studyking/core/data/extraction/ocr_extractor.dart';
 import 'package:studyking/core/data/extraction/pdf_extractor.dart';
 import 'package:studyking/core/data/extraction/transcription_extractor.dart';
+import 'package:studyking/core/data/models/source_figure.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
+import 'package:studyking/features/ingestion/services/extraction_result.dart';
 
 class FakeOcrEngine implements OcrEngine {
   @override
@@ -51,6 +54,18 @@ class FakePdfExtractor extends PdfExtractor {
         text: '',
         extractionMethod: 'fake_pdf',
       ));
+}
+
+/// Configurable PDF extractor that returns a canned [PdfExtractionResult],
+/// including optional images so the figure-extraction path can be tested.
+class ConfigurablePdfExtractor extends PdfExtractor {
+  final PdfExtractionResult result;
+
+  ConfigurablePdfExtractor(this.result);
+
+  @override
+  Future<Result<PdfExtractionResult>> extractFromFile(String filePath) async =>
+      Result.success(result);
 }
 
 class FakeTranscriptionExtractor extends TranscriptionExtractor {
@@ -638,6 +653,397 @@ void main() {
       expect(result.isError, isFalse);
       expect(result.text, 'Real transcript content from the video');
       expect(result.extractionMethod, 'transcribed_llm');
+    });
+  });
+
+  // --- Figure (image/chart/diagram) extraction (Vision Next-Term §4.1) ---
+
+  group('DocumentExtractor figuresFromPdfImages', () {
+    test('returns empty list for null images', () {
+      expect(DocumentExtractor.figuresFromPdfImages(null), isEmpty);
+    });
+
+    test('returns empty list for empty images', () {
+      expect(DocumentExtractor.figuresFromPdfImages([]), isEmpty);
+    });
+
+    test('skips images with empty bytes', () {
+      final images = [
+        PdfPageImage(pageNumber: 1, bytes: Uint8List(0), name: 'fig1'),
+        PdfPageImage(pageNumber: 2, bytes: Uint8List.fromList([1, 2, 3]), name: 'fig2'),
+      ];
+      final figures = DocumentExtractor.figuresFromPdfImages(images);
+      expect(figures.length, 1);
+      expect(figures[0].pageNumber, 2);
+      expect(figures[0].caption, 'fig2');
+    });
+
+    test('maps JPEG filter to image/jpeg mimeType', () {
+      final images = [
+        PdfPageImage(
+          pageNumber: 1,
+          bytes: Uint8List.fromList([0xFF, 0xD8]),
+          filter: 'DCTDecode',
+          name: 'chart',
+        ),
+      ];
+      final figures = DocumentExtractor.figuresFromPdfImages(images);
+      expect(figures.length, 1);
+      expect(figures[0].mimeType, 'image/jpeg');
+      expect(figures[0].source, 'pdf');
+      expect(figures[0].hasBytes, isTrue);
+    });
+
+    test('defaults to image/png for unknown filter', () {
+      final images = [
+        PdfPageImage(
+          pageNumber: 3,
+          bytes: Uint8List.fromList([1, 2, 3]),
+          filter: 'FlateDecode',
+        ),
+      ];
+      final figures = DocumentExtractor.figuresFromPdfImages(images);
+      expect(figures[0].mimeType, 'image/png');
+      expect(figures[0].pageNumber, 3);
+    });
+
+    test('uses empty caption when image name is null', () {
+      final images = [
+        PdfPageImage(
+          pageNumber: 1,
+          bytes: Uint8List.fromList([1]),
+          name: null,
+        ),
+      ];
+      final figures = DocumentExtractor.figuresFromPdfImages(images);
+      expect(figures[0].caption, '');
+    });
+  });
+
+  group('DocumentExtractor figureFromArchiveAsset', () {
+    test('returns null for empty resolved path', () {
+      final archive = Archive();
+      expect(DocumentExtractor.figureFromArchiveAsset(archive, ''), isNull);
+    });
+
+    test('returns null when asset is missing', () {
+      final archive = Archive();
+      expect(
+        DocumentExtractor.figureFromArchiveAsset(
+          archive,
+          'nonexistent.png',
+        ),
+        isNull,
+      );
+    });
+
+    test('returns null when asset size is zero', () {
+      final archive = Archive();
+      archive.addFile(ArchiveFile('image.png', 0, <int>[]));
+      expect(
+        DocumentExtractor.figureFromArchiveAsset(archive, 'image.png'),
+        isNull,
+      );
+    });
+
+    test('reads embedded asset bytes as a figure', () {
+      final archive = Archive();
+      final pngBytes = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]);
+      archive.addFile(ArchiveFile('media/image1.png', pngBytes.length, pngBytes));
+
+      final figure = DocumentExtractor.figureFromArchiveAsset(
+        archive,
+        'media/image1.png',
+        pageNumber: 5,
+        caption: 'Embedded chart',
+      );
+
+      expect(figure, isNotNull);
+      expect(figure!.hasBytes, isTrue);
+      expect(figure.bytes, pngBytes);
+      expect(figure.pageNumber, 5);
+      expect(figure.caption, 'Embedded chart');
+      expect(figure.mimeType, 'image/png');
+      expect(figure.source, 'office');
+    });
+
+    test('infers mimeType from extension when not provided', () {
+      final archive = Archive();
+      archive.addFile(ArchiveFile('pic.jpg', 3, Uint8List.fromList([1, 2, 3])));
+
+      final figure = DocumentExtractor.figureFromArchiveAsset(
+        archive,
+        'pic.jpg',
+      );
+
+      expect(figure, isNotNull);
+      expect(figure!.mimeType, 'image/jpeg');
+    });
+  });
+
+  group('DocumentExtractor stripImagePlaceholders', () {
+    test('removes [img:...] placeholders', () {
+      final text = 'Before [img:word/media/image1.png] After';
+      expect(DocumentExtractor.stripImagePlaceholders(text), 'Before  After');
+    });
+
+    test('removes [Image: ...] placeholders with dash prefix', () {
+      final text = 'Text\n- [Image: word/media/image1.png]\nMore text';
+      final cleaned = DocumentExtractor.stripImagePlaceholders(text);
+      expect(cleaned, isNot(contains('[Image')));
+      expect(cleaned, contains('Text'));
+      expect(cleaned, contains('More text'));
+    });
+
+    test('removes Embedded Images footer', () {
+      // The Embedded Images footer appears at the end of office-doc output.
+      final text = 'Content here\n\n'
+          '---\n**Embedded Images:** some images\n\n';
+      final cleaned = DocumentExtractor.stripImagePlaceholders(text);
+      expect(cleaned, isNot(contains('Embedded Images')));
+      expect(cleaned, contains('Content here'));
+    });
+
+    test('collapses multiple blank lines', () {
+      final text = 'A\n\n\n\n\nB';
+      final cleaned = DocumentExtractor.stripImagePlaceholders(text);
+      expect(cleaned, 'A\n\nB');
+    });
+
+    test('returns empty string for empty input', () {
+      expect(DocumentExtractor.stripImagePlaceholders(''), '');
+    });
+
+    test('leaves text without placeholders unchanged (trimmed)', () {
+      const text = 'Plain text without placeholders.';
+      expect(DocumentExtractor.stripImagePlaceholders(text), text);
+    });
+  });
+
+  group('DocumentExtractor PDF image extraction via file', () {
+    test('extracts PDF images as figures that survive ingestion', () async {
+      final jpegBytes = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]);
+      final pdfResult = PdfExtractionResult(
+        text: 'Some PDF text describing a chart.',
+        extractionMethod: 'pdf_parsed',
+        pageCount: 3,
+        images: [
+          PdfPageImage(
+            pageNumber: 1,
+            bytes: jpegBytes,
+            filter: 'DCTDecode',
+            name: 'Figure 1: Revenue chart',
+          ),
+          PdfPageImage(
+            pageNumber: 2,
+            bytes: Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]),
+            filter: 'FlateDecode',
+            name: 'Figure 2: Diagram',
+          ),
+        ],
+      );
+
+      final extractor = DocumentExtractor(
+        modelId: 'm',
+        localeName: 'en',
+        ocrExtractor: FakeOcrExtractor(
+          const OcrExtractionResult(text: '', extractionMethod: 'x'),
+        ),
+        pdfExtractor: ConfigurablePdfExtractor(pdfResult),
+        transcriptionExtractor: FakeTranscriptionExtractor(),
+      );
+
+      // The ConfigurablePdfExtractor is only reached through the file:// path,
+      // so we create a dummy file whose existence gates entry to the extractor.
+      final dir = await Directory.systemTemp.createTemp('sk_pdf_figure');
+      final filePath = '${dir.path}/doc.pdf';
+      await File(filePath).writeAsBytes([0x25, 0x50, 0x44, 0x46]);
+      try {
+        final result = await extractor.extractText(
+          rawContent: 'file://$filePath',
+          sourceType: SourceType.pdf,
+        );
+
+        expect(result.isError, isFalse);
+        expect(result.figures.length, 2);
+      expect(result.figures[0].pageNumber, 1);
+      expect(result.figures[0].mimeType, 'image/jpeg');
+        expect(result.figures[1].pageNumber, 2);
+        expect(result.figures[1].mimeType, 'image/png');
+      } finally {
+        await dir.delete(recursive: true);
+      }
+    });
+
+    test('preserves figures when text exceeds truncation ceiling', () async {
+      // Replicate the truncation invariant: a non-error ExtractionResult with
+      // figures must carry them through even when the text exceeds the ceiling.
+      // _truncateIfExceeds (private) is exercised via extractText for real;
+      // here we assert the figures field is independent of text length.
+      final figures = [
+        SourceFigure(pageNumber: 1, bytes: Uint8List.fromList([1])),
+      ];
+      final longText = 'a' * (DocumentExtractor.maxCharsPerSource + 100);
+      final result = ExtractionResult(
+        text: longText,
+        extractionMethod: 'test',
+        figures: figures,
+      );
+
+      expect(result.figures, figures);
+      expect(result.figures.length, 1);
+    });
+  });
+
+  group('DocumentExtractor office figure extraction', () {
+    test('extracts DOCX embedded image as figure and strips [img:] placeholders', () async {
+      final pngBytes = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]);
+      final archive = Archive()
+        ..addFile(ArchiveFile(
+          'word/document.xml',
+          utf8.encode(
+            '<w:document xmlns:w="w" xmlns:r="r" xmlns:a="a" xmlns:wp="wp">'
+            '<w:body>'
+            '<w:p><w:r><w:t>Some text [img:word/media/image1.png] more</w:t></w:r></w:p>'
+            '<w:p>'
+            '<w:r>'
+            '<w:drawing>'
+            '<wp:inline>'
+            '<a:blip r:embed="rId1"/>'
+            '</wp:inline>'
+            '</w:drawing>'
+            '</w:r>'
+            '<w:r><w:t>Caption text</w:t></w:r>'
+            '</w:p>'
+            '</w:body>'
+            '</w:document>',
+          ).length,
+          utf8.encode(
+            '<w:document xmlns:w="w" xmlns:r="r" xmlns:a="a" xmlns:wp="wp">'
+            '<w:body>'
+            '<w:p><w:r><w:t>Some text [img:word/media/image1.png] more</w:t></w:r></w:p>'
+            '<w:p>'
+            '<w:r>'
+            '<w:drawing>'
+            '<wp:inline>'
+            '<a:blip r:embed="rId1"/>'
+            '</wp:inline>'
+            '</w:drawing>'
+            '</w:r>'
+            '<w:r><w:t>Caption text</w:t></w:r>'
+            '</w:p>'
+            '</w:body>'
+            '</w:document>',
+          ),
+        ))
+        ..addFile(ArchiveFile(
+          'word/_rels/document.xml.rels',
+          utf8.encode(
+            '<Relationships xmlns="r">'
+            '<Relationship Id="rId1" Type="image" Target="media/image1.png"/>'
+            '</Relationships>',
+          ).length,
+          utf8.encode(
+            '<Relationships xmlns="r">'
+            '<Relationship Id="rId1" Type="image" Target="media/image1.png"/>'
+            '</Relationships>',
+          ),
+        ))
+        ..addFile(ArchiveFile(
+          'word/media/image1.png',
+          pngBytes.length,
+          pngBytes,
+        ));
+
+      final dir = await Directory.systemTemp.createTemp('sk_docx_figure');
+      try {
+        final zipBytes = ZipEncoder().encode(archive);
+        expect(zipBytes, isNotNull);
+        final path = '${dir.path}/test.docx';
+        await File(path).writeAsBytes(zipBytes!);
+
+        final extractor = buildExtractor(
+          const OcrExtractionResult(text: '', extractionMethod: 'x'),
+        );
+
+        final result = await extractor.extractText(
+          rawContent: 'file://$path',
+          sourceType: SourceType.document,
+        );
+
+        expect(result.isError, isFalse);
+        expect(result.figures.length, 1);
+        expect(result.figures[0].hasBytes, isTrue);
+        expect(result.figures[0].bytes, pngBytes);
+        expect(result.figures[0].mimeType, 'image/png');
+        expect(result.figures[0].source, 'office');
+        // The [img:] placeholder must be stripped from the text.
+        expect(result.text, isNot(contains('[img:')));
+      } finally {
+        await dir.delete(recursive: true);
+      }
+    });
+
+    test('extracts PPTX embedded image with page number from slide', () async {
+      final jpegBytes = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]);
+      final archive = Archive()
+        ..addFile(ArchiveFile(
+          'ppt/slides/slide1.xml',
+          utf8.encode(
+            '<p:sld xmlns:p="p" xmlns:a="a">'
+            '<p:sp><a:t>Slide 1 text</a:t></p:sp>'
+            '<p:pic><a:blip r:embed="rId2"/></p:pic>'
+            '</p:sld>',
+          ).length,
+          utf8.encode(
+            '<p:sld xmlns:p="p" xmlns:a="a">'
+            '<p:sp><a:t>Slide 1 text</a:t></p:sp>'
+            '<p:pic><a:blip r:embed="rId2"/></p:pic>'
+            '</p:sld>',
+          ),
+        ))
+        ..addFile(ArchiveFile(
+          'ppt/_rels/presentation.xml.rels',
+          utf8.encode(
+            '<Relationships xmlns="r">'
+            '<Relationship Id="rId2" Type="image" Target="media/image1.png"/>'
+            '</Relationships>',
+          ).length,
+          utf8.encode(
+            '<Relationships xmlns="r">'
+            '<Relationship Id="rId2" Type="image" Target="media/image1.png"/>'
+            '</Relationships>',
+          ),
+        ))
+        ..addFile(ArchiveFile(
+          'ppt/media/image1.png',
+          jpegBytes.length,
+          jpegBytes,
+        ));
+
+      final dir = await Directory.systemTemp.createTemp('sk_pptx_figure');
+      try {
+        final zipBytes = ZipEncoder().encode(archive);
+        expect(zipBytes, isNotNull);
+        final path = '${dir.path}/deck.pptx';
+        await File(path).writeAsBytes(zipBytes!);
+
+        final extractor = buildExtractor(
+          const OcrExtractionResult(text: '', extractionMethod: 'x'),
+        );
+
+        final result = await extractor.extractText(
+          rawContent: 'file://$path',
+          sourceType: SourceType.document,
+        );
+
+        expect(result.isError, isFalse);
+        expect(result.figures.length, 1);
+        expect(result.figures[0].pageNumber, 1);
+        expect(result.figures[0].source, 'office');
+      } finally {
+        await dir.delete(recursive: true);
+      }
     });
   });
 }

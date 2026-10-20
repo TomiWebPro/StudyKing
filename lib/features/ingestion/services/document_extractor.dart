@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io' show File;
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
@@ -15,6 +16,7 @@ import 'package:studyking/core/data/extraction/ocr_extractor.dart';
 import 'package:studyking/core/data/extraction/pdf_extractor.dart';
 import 'package:studyking/core/data/extraction/transcription_extractor.dart';
 import 'package:studyking/core/data/extraction/transcription_pipeline.dart';
+import 'package:studyking/core/data/models/source_figure.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/features/ingestion/services/extraction_result.dart';
@@ -141,6 +143,7 @@ class DocumentExtractor {
       mimeType: result.mimeType,
       errorMessage: result.errorMessage,
       chunks: result.chunks,
+      figures: result.figures,
       truncated: true,
       truncationNote: 'Content truncated to $maxCharsPerSource characters '
           '(source exceeds token ceiling). Some material may be missing.',
@@ -153,6 +156,105 @@ class DocumentExtractor {
   static bool _looksLikeUrl(String value) {
     final v = value.trim();
     return v.startsWith('http://') || v.startsWith('https://');
+  }
+
+  // --- Figure (image/chart/diagram) extraction (Vision Next-Term section 4.1) ---
+
+  /// Converts PDF image XObjects into [SourceFigure]s so figures survive
+  /// ingestion. `null`/empty image lists produce an empty list.
+  static List<SourceFigure> figuresFromPdfImages(List<PdfPageImage>? images) {
+    if (images == null || images.isEmpty) return const [];
+    final result = <SourceFigure>[];
+    for (final img in images) {
+      if (img.bytes.isEmpty) continue;
+      result.add(SourceFigure(
+        pageNumber: img.pageNumber,
+        bytes: img.bytes,
+        caption: img.name ?? '',
+        mimeType: _mimeTypeForPdfImage(img),
+        source: 'pdf',
+      ));
+    }
+    return result;
+  }
+
+  /// Derives a MIME type from a [PdfPageImage]'s filter and color space.
+  static String _mimeTypeForPdfImage(PdfPageImage img) {
+    final filter = img.filter ?? '';
+    final f = filter.normalized;
+    if (f.contains('dct') || f.contains('jpeg')) return 'image/jpeg';
+    if (f.contains('jpx')) return 'image/jp2';
+    if (f.contains('jbig')) return 'image/jbig2';
+    if (f.contains('ccitt')) return 'image/tiff';
+    return 'image/png';
+  }
+
+  /// Reads the bytes of an embedded office asset at [resolvedPath] inside the
+  /// [archive] and wraps them as a [SourceFigure]. Returns `null` when the
+  /// asset is missing or empty so callers can skip it gracefully.
+  static SourceFigure? figureFromArchiveAsset(
+    Archive archive,
+    String resolvedPath, {
+    int pageNumber = 0,
+    String caption = '',
+    String mimeType = '',
+  }) {
+    if (resolvedPath.isEmpty) return null;
+    late final ArchiveFile archiveFile;
+    var found = false;
+    for (final f in archive.files) {
+      if (f.name == resolvedPath) {
+        archiveFile = f;
+        found = true;
+        break;
+      }
+    }
+    if (!found || archiveFile.size == 0) return null;
+    final content = archiveFile.content;
+    if (content is! List<int>) return null;
+    final bytes = Uint8List.fromList(content);
+    if (bytes.isEmpty) return null;
+    return SourceFigure(
+      pageNumber: pageNumber,
+      bytes: bytes,
+      caption: caption,
+      mimeType: mimeType.isNotEmpty ? mimeType : _mimeTypeFromExtension(resolvedPath),
+      source: 'office',
+    );
+  }
+
+  /// Maps a file extension (from an archive asset name) to a MIME type.
+  static String _mimeTypeFromExtension(String path) {
+    final parts = path.split('.');
+    if (parts.length < 2) return 'application/octet-stream';
+    final ext = parts.last.normalized;
+    if (ext == 'png') return 'image/png';
+    if (ext == 'jpg' || ext == 'jpeg') return 'image/jpeg';
+    if (ext == 'gif') return 'image/gif';
+    if (ext == 'webp') return 'image/webp';
+    if (ext == 'bmp') return 'image/bmp';
+    if (ext == 'tiff' || ext == 'tif') return 'image/tiff';
+    return 'application/octet-stream';
+  }
+
+  /// Removes dead image-placeholder strings emitted by office-doc extractors
+  /// (`[img:word/media/image1.png]`, `[Image: word/media/image1.png]`) and the
+  /// "Embedded Images" reference footer so no raw `[img:]` strings ever leak
+  /// into extracted text and downstream LLM prompts
+  /// (agent_must_read section 9 / Vision Next-Term section 3.1 content
+  /// grounding). Applied as a safety net so the no-leak invariant holds
+  /// regardless of extractor path.
+  static String stripImagePlaceholders(String text) {
+    if (text.isEmpty) return text;
+    var cleaned = text;
+    cleaned = cleaned.replaceAll(RegExp(r'\[img:[^\]]*\]'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'-\s*\[Image:[^\]]*\]'), '');
+    cleaned = cleaned.replaceAll(
+      RegExp(r'\n---\n\*\*Embedded Images:\*\*.*\n?', dotAll: true),
+      '',
+    );
+    cleaned = cleaned.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    return cleaned.trim();
   }
 
   Future<ExtractionResult> _extractPdfOrDocument(
@@ -183,14 +285,15 @@ class DocumentExtractor {
           if (isZip) {
             final extension = filePath.split('.').last.normalized;
             try {
-              final text = _extractFromZip(bytes, extension);
-              if (text.isNotEmpty) {
+              final (text, figures) = _extractFromZip(bytes, extension);
+              if (text.isNotEmpty || figures.isNotEmpty) {
                 final chunks = _chunkContent(text);
                 return ExtractionResult(
-                  text: text,
+                  text: stripImagePlaceholders(text),
                   extractionMethod: '${extension}_parsed',
                   pageCount: chunks.isNotEmpty ? chunks.length : null,
                   chunks: chunks,
+                  figures: figures,
                 );
               }
             } catch (e) {
@@ -231,6 +334,7 @@ class DocumentExtractor {
                     extractionMethod: data.extractionMethod,
                     pageCount: data.pageCount,
                     chunks: chunks,
+                    figures: figuresFromPdfImages(data.images),
                   );
                 }
                 return null;
@@ -718,7 +822,7 @@ class DocumentExtractor {
     return lines.join('\n\n');
   }
 
-  String _extractFromZip(List<int> bytes, String extension) {
+  (String, List<SourceFigure>) _extractFromZip(List<int> bytes, String extension) {
     final archive = ZipDecoder().decodeBytes(bytes);
     switch (extension) {
       case 'docx':
@@ -738,28 +842,28 @@ class DocumentExtractor {
       case 'key':
         return _extractIwork(archive, 'keynote');
       default:
-        return '';
+        return ('', const []);
     }
   }
 
-  String _extractDocx(Archive archive) {
+  (String, List<SourceFigure>) _extractDocx(Archive archive) {
     final documentFile = archive.files.firstWhere(
       (f) => f.name == 'word/document.xml',
       orElse: () => ArchiveFile('', 0, 0),
     );
-    if (documentFile.size == 0) return '';
+    if (documentFile.size == 0) return ('', const []);
 
     final document = XmlDocument.parse(utf8.decode(documentFile.content));
     final buffer = StringBuffer();
     final footnoteBuffer = StringBuffer();
-    final imageReferences = <String>[];
+    final figures = <SourceFigure>[];
 
     final body = document.findAllElements('w:body').firstOrNull;
     if (body != null) {
       for (final child in body.childElements) {
         final localName = child.name.local;
         if (localName == 'p') {
-          _extractDocxParagraph(archive, child, buffer, footnoteBuffer, imageReferences);
+          _extractDocxParagraph(archive, child, buffer, footnoteBuffer, figures);
         } else if (localName == 'tbl') {
           buffer.writeln(_extractDocxTable(child));
         }
@@ -774,14 +878,7 @@ class DocumentExtractor {
       }
     }
 
-    if (imageReferences.isNotEmpty) {
-      buffer.writeln('\n---\n**Embedded Images:**');
-      for (final ref in imageReferences) {
-        buffer.writeln('- $ref');
-      }
-    }
-
-    return buffer.toString().trim();
+    return (stripImagePlaceholders(buffer.toString().trim()), figures);
   }
 
   void _extractDocxParagraph(
@@ -789,7 +886,7 @@ class DocumentExtractor {
     XmlElement paragraph,
     StringBuffer buffer,
     StringBuffer footnoteBuffer,
-    List<String> imageReferences,
+    List<SourceFigure> figures,
   ) {
     final hasFootnoteRef = paragraph.findAllElements('w:footnoteReference').isNotEmpty;
     final hasImage = paragraph.findAllElements('a:blip').isNotEmpty ||
@@ -813,8 +910,14 @@ class DocumentExtractor {
         if (rId.isNotEmpty) {
           final imagePath = _resolveDocxImagePath(archive, rId);
           if (imagePath.isNotEmpty) {
-            imageReferences.add('[Image: $imagePath]');
-            buffer.write(' [img:$imagePath]');
+            final figure = figureFromArchiveAsset(
+              archive,
+              imagePath,
+              caption: 'Figure (DOCX)',
+            );
+            if (figure != null) {
+              figures.add(figure);
+            }
           }
         }
       }
@@ -913,7 +1016,7 @@ class DocumentExtractor {
     return footnotes;
   }
 
-  String _extractEpub(Archive archive) {
+  (String, List<SourceFigure>) _extractEpub(Archive archive) {
     String stripHtmlTags(String html) {
       final buffer = StringBuffer();
       var inTag = false;
@@ -941,17 +1044,17 @@ class DocumentExtractor {
 
     try {
       final containerXml = readFileContent(archive, 'META-INF/container.xml');
-      if (containerXml.isEmpty) return '';
+      if (containerXml.isEmpty) return ('', const []);
 
       final container = XmlDocument.parse(containerXml);
       final rootfile = container.findAllElements('rootfile').firstOrNull;
-      if (rootfile == null) return '';
+      if (rootfile == null) return ('', const []);
 
       final opfPath = rootfile.getAttribute('full-path') ?? '';
-      if (opfPath.isEmpty) return '';
+      if (opfPath.isEmpty) return ('', const []);
 
       final opfContent = readFileContent(archive, opfPath);
-      if (opfContent.isEmpty) return '';
+      if (opfContent.isEmpty) return ('', const []);
 
       final opf = XmlDocument.parse(opfContent);
       final opfDir = opfPath.contains('/')
@@ -985,10 +1088,10 @@ class DocumentExtractor {
         }
       }
 
-      return buffer.toString().trim();
+      return (buffer.toString().trim(), const []);
     } catch (e) {
       _logger.w('EPUB extraction failed: $e');
-      return '';
+      return ('', const []);
     }
   }
 
@@ -1014,7 +1117,7 @@ class DocumentExtractor {
     return match != null ? int.parse(match.group(1)!) : null;
   }
 
-  String _extractXlsx(Archive archive) {
+  (String, List<SourceFigure>) _extractXlsx(Archive archive) {
     String readFile(Archive archive, String path) {
       final file = archive.files.firstWhere(
         (f) => f.name == path,
@@ -1066,14 +1169,14 @@ class DocumentExtractor {
         }
       }
 
-      return buffer.toString().trim();
+      return (buffer.toString().trim(), const []);
     } catch (e) {
       _logger.w('XLSX extraction failed: $e');
-      return '';
+      return ('', const []);
     }
   }
 
-  String _extractPptx(Archive archive) {
+  (String, List<SourceFigure>) _extractPptx(Archive archive) {
     String extractSlideText(String xmlContent) {
       try {
         final slide = XmlDocument.parse(xmlContent);
@@ -1110,13 +1213,15 @@ class DocumentExtractor {
     }
 
     final buffer = StringBuffer();
-    final imageReferences = <String>[];
+    final figures = <SourceFigure>[];
     final slideFiles = archive.files
         .where((f) => f.name.startsWith('ppt/slides/slide') && f.name.endsWith('.xml'))
         .toList()
       ..sort(_comparePartNames);
 
+    var slideNumber = 0;
     for (final slideFile in slideFiles) {
+      slideNumber++;
       final xmlContent = utf8.decode(slideFile.content);
       final text = extractSlideText(xmlContent);
       if (text.isNotEmpty) {
@@ -1127,22 +1232,22 @@ class DocumentExtractor {
       for (final rId in slideImages) {
         final imagePath = _resolvePptxImagePath(archive, rId);
         if (imagePath.isNotEmpty) {
-          imageReferences.add('[Image: $imagePath]');
-          buffer.writeln('[img:$imagePath]');
+          final figure = figureFromArchiveAsset(
+            archive,
+            imagePath,
+            pageNumber: slideNumber,
+            caption: 'Figure (PPTX slide $slideNumber)',
+          );
+          if (figure != null) {
+            figures.add(figure);
+          }
         }
       }
 
       buffer.writeln('---');
     }
 
-    if (imageReferences.isNotEmpty) {
-      buffer.writeln('\n**Embedded Images:**');
-      for (final ref in imageReferences) {
-        buffer.writeln('- $ref');
-      }
-    }
-
-    return buffer.toString().trim();
+    return (stripImagePlaceholders(buffer.toString().trim()), figures);
   }
 
   String _resolvePptxImagePath(Archive archive, String rId) {
@@ -1168,37 +1273,30 @@ class DocumentExtractor {
     return '';
   }
 
-  String _extractOdt(Archive archive) {
+  (String, List<SourceFigure>) _extractOdt(Archive archive) {
     final contentFile = archive.files.firstWhere(
       (f) => f.name == 'content.xml',
       orElse: () => ArchiveFile('', 0, 0),
     );
-    if (contentFile.size == 0) return '';
+    if (contentFile.size == 0) return ('', const []);
 
     try {
       final document = XmlDocument.parse(utf8.decode(contentFile.content));
       final buffer = StringBuffer();
-      final imageReferences = <String>[];
+      final figures = <SourceFigure>[];
 
       for (final paragraph in document.findAllElements('text:p')) {
-        _extractOdtParagraph(archive, paragraph, buffer, imageReferences);
+        _extractOdtParagraph(archive, paragraph, buffer, figures);
       }
 
       for (final table in document.findAllElements('table:table')) {
         buffer.writeln(_extractOdtTable(table));
       }
 
-      if (imageReferences.isNotEmpty) {
-        buffer.writeln('\n---\n**Embedded Images:**');
-        for (final ref in imageReferences) {
-          buffer.writeln('- $ref');
-        }
-      }
-
-      return buffer.toString().trim();
+      return (stripImagePlaceholders(buffer.toString().trim()), figures);
     } catch (e) {
       _logger.w('ODT extraction failed: $e');
-      return '';
+      return ('', const []);
     }
   }
 
@@ -1206,7 +1304,7 @@ class DocumentExtractor {
     Archive archive,
     XmlElement paragraph,
     StringBuffer buffer,
-    List<String> imageReferences,
+    List<SourceFigure> figures,
   ) {
     final hasChildElements = paragraph.childElements.isNotEmpty;
 
@@ -1235,8 +1333,22 @@ class DocumentExtractor {
     for (final image in paragraph.findAllElements('draw:image')) {
       final href = image.getAttribute('xlink:href') ?? '';
       if (href.isNotEmpty && !href.startsWith('data:')) {
-        imageReferences.add('[Image: $href]');
-        buffer.write(' [img:$href]');
+        // Resolve the ODT image reference. ODF stores images as either
+        // Pictures/PictureXXX (with the actual content in
+        // `Pictures/imageXXX`) or as a direct path.
+        final resolved = href.startsWith('Pictures/')
+            ? href
+            : archive.files.any((f) => f.name == 'Pictures/$href')
+                ? 'Pictures/$href'
+                : href;
+        final figure = figureFromArchiveAsset(
+          archive,
+          resolved,
+          caption: 'Figure (ODT)',
+        );
+        if (figure != null) {
+          figures.add(figure);
+        }
       }
     }
 
@@ -1342,7 +1454,7 @@ class DocumentExtractor {
     return lines.join('\n\n');
   }
 
-  String _extractIwork(Archive archive, String type) {
+  (String, List<SourceFigure>) _extractIwork(Archive archive, String type) {
     String readFile(String path) {
       final file = archive.files.firstWhere(
         (f) => f.name == path,
@@ -1354,7 +1466,7 @@ class DocumentExtractor {
 
     try {
       final indexXml = readFile('index.xml');
-      if (indexXml.isEmpty) return '';
+      if (indexXml.isEmpty) return ('', const []);
 
       final document = XmlDocument.parse(indexXml);
       final buffer = StringBuffer();
@@ -1375,17 +1487,17 @@ class DocumentExtractor {
       }
 
       final result = buffer.toString().trim();
-      if (result.isNotEmpty) return result;
+      if (result.isNotEmpty) return (result, const []);
 
       final allText = document.toXmlString();
       final textOnly = allText.replaceAll(RegExp(r'<[^>]+>'), ' ');
       final cleaned = textOnly.split(RegExp(r'\s+'))
           .where((w) => w.length > 2)
           .join(' ');
-      return cleaned;
+      return (cleaned, const []);
     } catch (e) {
       _logger.w('$type extraction failed: $e');
-      return '';
+      return ('', const []);
     }
   }
 

@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/models/source_figure.dart';
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/features/ingestion/services/extraction_result.dart';
 
@@ -252,5 +254,60 @@ void main() {
         expect(meta.containsKey('truncationNote'), isFalse);
       });
     });
+
+    group('figures', () {
+      test('defaults to empty when not provided', () {
+        final result = ExtractionResult(text: 'test');
+        expect(result.figures, isEmpty);
+      });
+
+      test('figuresToJson returns empty string when no figures', () {
+        final result = ExtractionResult(text: 'test');
+        expect(result.figuresToJson(), '');
+      });
+
+      test('toMetaJson includes figureCount when figures present', () {
+        final result = ExtractionResult(
+          text: 'test',
+          figures: [
+            SourceFigure(pageNumber: 1, bytes: Uint8List.fromList([1])),
+            SourceFigure(pageNumber: 2, bytes: Uint8List.fromList([2])),
+          ],
+        );
+
+        final meta = result.toMetaJson();
+        expect(meta['figureCount'], 2);
+      });
+
+      test('toMetaJson omits figureCount when figures empty', () {
+        final result = ExtractionResult(text: 'test');
+        final meta = result.toMetaJson();
+        expect(meta.containsKey('figureCount'), isFalse);
+      });
+
+      test('figuresToJson round-trips through SourceFigure.parse', () {
+        final original = [
+          SourceFigure(
+            pageNumber: 3,
+            bytes: Uint8List.fromList([10, 20, 30]),
+            caption: 'Figure 3',
+            mimeType: 'image/png',
+            source: 'pdf',
+          ),
+        ];
+        final result = ExtractionResult(text: 'test', figures: original);
+
+        final json = result.figuresToJson();
+        final parsed = SourceFigure.parse(json);
+
+        expect(parsed.length, 1);
+        expect(parsed[0].pageNumber, 3);
+        expect(parsed[0].bytes, [10, 20, 30]);
+        expect(parsed[0].caption, 'Figure 3');
+        expect(parsed[0].mimeType, 'image/png');
+        expect(parsed[0].source, 'pdf');
+      });
+    });
   });
 }
+

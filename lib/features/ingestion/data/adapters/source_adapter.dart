@@ -40,12 +40,13 @@ class SourceAdapter extends TypeAdapter<Source> {
           : const [],
       generatedStudyGuideId: fields[21] as String? ?? '',
       generatedConceptMapId: fields[22] as String? ?? '',
+      figuresJson: fields[23] as String? ?? '',
     );
   }
 
   @override
   void write(BinaryWriter writer, Source obj) {
-    writer.writeByte(23);
+    writer.writeByte(24);
     writer.writeByte(0);
     writer.write(obj.id);
     writer.writeByte(1);
@@ -92,5 +93,7 @@ class SourceAdapter extends TypeAdapter<Source> {
     writer.write(obj.generatedStudyGuideId);
     writer.writeByte(22);
     writer.write(obj.generatedConceptMapId);
+    writer.writeByte(23);
+    writer.write(obj.figuresJson);
   }
 }

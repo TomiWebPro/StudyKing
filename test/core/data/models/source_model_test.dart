@@ -31,6 +31,7 @@ void main() {
         expect(source.chunks, '');
         expect(source.extractionMeta, '');
         expect(source.createdAt, isNull);
+        expect(source.figuresJson, '');
       });
 
       test('creates with all fields', () {
@@ -54,6 +55,7 @@ void main() {
           chunks: '[]',
           extractionMeta: '{"pages": 5}',
           createdAt: createdAt,
+          figuresJson: '[{"pageNumber":1,"bytes":"abc","caption":"Chart","mimeType":"image/png","source":"pdf"}]',
         );
 
         expect(source.id, 'source-2');
@@ -74,6 +76,7 @@ void main() {
         expect(source.chunks, '[]');
         expect(source.extractionMeta, '{"pages": 5}');
         expect(source.createdAt, createdAt);
+        expect(source.figuresJson, contains('Chart'));
       });
 
       test('applies default values for optional fields', () {
@@ -98,6 +101,7 @@ void main() {
         expect(source.chunks, '');
         expect(source.extractionMeta, '');
         expect(source.createdAt, isNull);
+        expect(source.figuresJson, '');
       });
     });
 
@@ -172,6 +176,7 @@ void main() {
         expect(json['chunks'], '');
         expect(json['extractionMeta'], '');
         expect(json['createdAt'], isNull);
+        expect(json['figuresJson'], '');
       });
 
       test('serializes all fields correctly', () {
@@ -220,6 +225,7 @@ void main() {
         expect(source.type, SourceType.pdf);
         expect(source.content, '');
         expect(source.processingStatus, 'pending');
+        expect(source.figuresJson, '');
       });
 
       test('parses all fields correctly', () {
@@ -242,6 +248,7 @@ void main() {
           'chunks': '[]',
           'extractionMeta': '{}',
           'createdAt': '2024-01-15T10:30:00.000',
+          'figuresJson': '[{"pageNumber":1,"bytes":"abc","caption":"Chart"}]',
         };
 
         final source = Source.fromJson(json);
@@ -264,6 +271,7 @@ void main() {
         expect(source.chunks, '[]');
         expect(source.extractionMeta, '{}');
         expect(source.createdAt, DateTime(2024, 1, 15, 10, 30));
+        expect(source.figuresJson, contains('Chart'));
       });
 
       test('handles null createdAt', () {
@@ -405,13 +413,29 @@ void main() {
         expect(copy.createdAt, date);
       });
 
-      test('preserves generatedQuestionIds when null is passed', () {
+      test('creates copy with updated figuresJson', () {
         final original = Source(
-          id: 's1', title: 'Test', type: SourceType.pdf,
-          generatedQuestionIds: ['q1', 'q2'],
+          id: 'source-1',
+          title: 'Test',
+          type: SourceType.pdf,
         );
-        final copy = original.copyWith(generatedQuestionIds: null);
-        expect(copy.generatedQuestionIds, ['q1', 'q2']);
+        final copy = original.copyWith(
+          figuresJson: '[{"pageNumber":1,"bytes":"abc"}]',
+        );
+
+        expect(copy.figuresJson, contains('pageNumber'));
+        expect(original.figuresJson, '');
+      });
+
+      test('preserves figuresJson when null is passed', () {
+        final original = Source(
+          id: 's1',
+          title: 'Test',
+          type: SourceType.pdf,
+          figuresJson: '[{"pageNumber":1}]',
+        );
+        final copy = original.copyWith(figuresJson: null);
+        expect(copy.figuresJson, '[{"pageNumber":1}]');
       });
     });
 
@@ -482,6 +506,22 @@ void main() {
         expect(restored.title, original.title);
         expect(restored.type, original.type);
         expect(restored.processingStatus, original.processingStatus);
+      });
+
+      test('full round-trip preserves figuresJson', () {
+        final figuresJson =
+            '[{"pageNumber":1,"bytes":"AQID","caption":"Chart","mimeType":"image/png","source":"pdf"}]';
+        final original = Source(
+          id: 'source-1',
+          title: 'Physics Textbook',
+          type: SourceType.pdf,
+          figuresJson: figuresJson,
+        );
+
+        final json = original.toJson();
+        final restored = Source.fromJson(json);
+
+        expect(restored.figuresJson, figuresJson);
       });
     });
 

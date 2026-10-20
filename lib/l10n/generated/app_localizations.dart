@@ -8279,6 +8279,30 @@ abstract class AppLocalizations {
   /// **'pp. {start}-{end}'**
   String sourcePageRange(int start, int end);
 
+  /// Section header for source figures with count
+  ///
+  /// In en, this message translates to:
+  /// **'Figures ({count})'**
+  String figuresCount(int count);
+
+  /// Label for a figure number
+  ///
+  /// In en, this message translates to:
+  /// **'Figure {number}'**
+  String figureLabel(int number);
+
+  /// Page reference for a figure (0 means page unknown)
+  ///
+  /// In en, this message translates to:
+  /// **'p. {page}'**
+  String figurePageReference(int page);
+
+  /// Fallback text when figure image bytes cannot be rendered
+  ///
+  /// In en, this message translates to:
+  /// **'Image unavailable'**
+  String get figureImageUnavailable;
+
   /// Section header for generated questions
   ///
   /// In en, this message translates to:

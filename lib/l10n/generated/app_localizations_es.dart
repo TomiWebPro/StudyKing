@@ -5046,6 +5046,24 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String figuresCount(int count) {
+    return 'Figuras ($count)';
+  }
+
+  @override
+  String figureLabel(int number) {
+    return 'Figura $number';
+  }
+
+  @override
+  String figurePageReference(int page) {
+    return 'p. $page';
+  }
+
+  @override
+  String get figureImageUnavailable => 'Imagen no disponible';
+
+  @override
   String get generatedQuestions => 'Preguntas Generadas';
 
   @override

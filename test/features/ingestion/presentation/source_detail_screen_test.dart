@@ -676,4 +676,114 @@ void main() {
           findsOneWidget);
     });
   });
+
+  group('SourceDetailScreen - figure rendering', () {
+    testWidgets('renders figures section when source has figures', (tester) async {
+      final figuresJson =
+          '[{"pageNumber":1,"bytes":"iVBORw0KGgo=","caption":"Figure 1: Revenue chart","mimeType":"image/png","source":"pdf"}]';
+      final sourceWithFigures = Source(
+        id: 'src1',
+        title: 'Physics Textbook',
+        type: SourceType.pdf,
+        subjectId: 'sub1',
+        studentId: 'stu1',
+        processingStatus: 'completed',
+        figuresJson: figuresJson,
+        extractedText: 'some text',
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: _FakeSourceRepo({'src1': sourceWithFigures}),
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo(),
+        questionRepo: _FakeQuestionRepo(),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      // Section header shows the figure count.
+      expect(find.text('Figures (1)'), findsOneWidget);
+      // Caption is rendered.
+      expect(find.text('Figure 1: Revenue chart'), findsOneWidget);
+      // Page reference is rendered.
+      expect(find.text('p. 1'), findsOneWidget);
+      // The image is rendered (Image.memory produces a widget).
+      expect(find.byType(Image), findsWidgets);
+    });
+
+    testWidgets('omits figures section when source has no figures', (tester) async {
+      final sourceNoFigures = Source(
+        id: 'src1',
+        title: 'Textbook',
+        type: SourceType.pdf,
+        processingStatus: 'completed',
+        extractedText: 'some text',
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: _FakeSourceRepo({'src1': sourceNoFigures}),
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo(),
+        questionRepo: _FakeQuestionRepo(),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Figures (0)'), findsNothing);
+    });
+
+    testWidgets('uses figureLabel fallback when caption is empty', (tester) async {
+      final figuresJson =
+          '[{"pageNumber":2,"bytes":"iVBORw0KGgo=","caption":"","mimeType":"image/png","source":"pdf"}]';
+      final sourceWithFigures = Source(
+        id: 'src1',
+        title: 'Textbook',
+        type: SourceType.pdf,
+        processingStatus: 'completed',
+        figuresJson: figuresJson,
+        extractedText: 'some text',
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: _FakeSourceRepo({'src1': sourceWithFigures}),
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo(),
+        questionRepo: _FakeQuestionRepo(),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Figure 1'), findsOneWidget);
+      expect(find.text('p. 2'), findsOneWidget);
+    });
+
+    testWidgets('renders multiple figures with correct page references', (tester) async {
+      final figuresJson =
+          '[{"pageNumber":1,"bytes":"iVBORw0KGgo=","caption":"Chart A","mimeType":"image/png","source":"pdf"},'
+          '{"pageNumber":3,"bytes":"iVBORw0KGgo=","caption":"Chart B","mimeType":"image/jpeg","source":"docx"}]';
+      final sourceWithFigures = Source(
+        id: 'src1',
+        title: 'Textbook',
+        type: SourceType.pdf,
+        processingStatus: 'completed',
+        figuresJson: figuresJson,
+        extractedText: 'some text',
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: _FakeSourceRepo({'src1': sourceWithFigures}),
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo(),
+        questionRepo: _FakeQuestionRepo(),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Figures (2)'), findsOneWidget);
+      expect(find.text('Chart A'), findsOneWidget);
+      expect(find.text('Chart B'), findsOneWidget);
+      expect(find.text('p. 1'), findsOneWidget);
+      expect(find.text('p. 3'), findsOneWidget);
+    });
+  });
 }

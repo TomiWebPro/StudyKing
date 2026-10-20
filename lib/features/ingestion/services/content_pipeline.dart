@@ -268,6 +268,7 @@ class ContentPipeline {
           extractionMethod: extractionResult.extractionMethod,
           extractedText: '',
           chunks: '',
+          figuresJson: '',
           extractionMeta: jsonEncode(extractionResult.toMetaJson()),
           errorMessage: extractionResult.errorMessage ?? 'Extraction failed',
         );
@@ -291,6 +292,7 @@ class ContentPipeline {
         extractedText: extractionResult.text,
         extractionMethod: extractionResult.extractionMethod,
         chunks: extractionResult.chunksToJson(),
+        figuresJson: extractionResult.figuresToJson(),
         extractionMeta: jsonEncode(extractionResult.toMetaJson()),
       );
       final extractionSave = await _saveSource(updated);

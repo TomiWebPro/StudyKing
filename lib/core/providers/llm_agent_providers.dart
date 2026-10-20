@@ -16,6 +16,7 @@ import 'package:studyking/features/questions/providers/question_providers.dart'
         sourceRepositoryProvider;
 import 'package:studyking/features/mentor/services/tools/ingest_pdf_to_kb_tool.dart';
 import 'package:studyking/features/mentor/services/tools/explain_differently_tool.dart';
+import 'package:studyking/features/mentor/services/tools/reconstruct_chart_tool.dart';
 import 'package:studyking/features/mentor/services/tools/enqueue_question_variants_tool.dart';
 import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
 import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.dart';
@@ -86,6 +87,10 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
   // the AgentLoop tool-calling infrastructure.
   return [
     ExplainDifferentlyTool(llmService: llmService, modelId: modelId),
+    // Vision Next-Term §24 / agent_must_read.md §24: reconstruct described charts
+    // and diagrams into renderable Mermaid specs so lessons can surface visual
+    // content even when the original figure bytes are unavailable.
+    ReconstructChartTool(llmService: llmService, modelId: modelId),
     SuggestPracticeTool(
       onSuggestPractice: ({
         required String subjectId,

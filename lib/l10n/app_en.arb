@@ -6610,6 +6610,37 @@
       }
     }
   },
+  "figuresCount": "Figures ({count})",
+  "@figuresCount": {
+    "description": "Section header for source figures with count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "figureLabel": "Figure {number}",
+  "@figureLabel": {
+    "description": "Label for a figure number",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "figurePageReference": "p. {page}",
+  "@figurePageReference": {
+    "description": "Page reference for a figure (0 means page unknown)",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "figureImageUnavailable": "Image unavailable",
+  "@figureImageUnavailable": {
+    "description": "Fallback text when figure image bytes cannot be rendered"
+  },
   "generatedQuestions": "Generated Questions",
   "@generatedQuestions": {
     "description": "Section header for generated questions"

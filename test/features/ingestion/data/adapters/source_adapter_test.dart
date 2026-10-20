@@ -39,6 +39,7 @@ void main() {
         chunks: 'chunk1,chunk2',
         extractionMeta: '{"pages": 10}',
         createdAt: now,
+        figuresJson: '[{"pageNumber":1,"bytes":"abc","caption":"Chart","mimeType":"image/png","source":"pdf"}]',
       );
 
       final writeCache = <int, dynamic>{};
@@ -66,6 +67,7 @@ void main() {
       expect(restored.chunks, source.chunks);
       expect(restored.extractionMeta, source.extractionMeta);
       expect(restored.createdAt, source.createdAt);
+      expect(restored.figuresJson, source.figuresJson);
     });
 
     test('read and write round-trips a Source with minimal fields', () {
@@ -112,6 +114,28 @@ void main() {
       expect(restored.id, source.id);
       expect(restored.title, source.title);
       expect(restored.createdAt, isNull);
+    });
+
+    test('round-trips figuresJson with multiple figures', () {
+      final adapter = SourceAdapter();
+      final figuresJson =
+          '[{"pageNumber":1,"bytes":"YWJj","caption":"Chart 1","mimeType":"image/png","source":"pdf"},'
+          '{"pageNumber":2,"bytes":"ZGVm","caption":"Diagram 2","mimeType":"image/jpeg","source":"docx"}]';
+      final source = Source(
+        id: 'src4',
+        title: 'Figures Doc',
+        type: SourceType.pdf,
+        figuresJson: figuresJson,
+      );
+
+      final writeCache = <int, dynamic>{};
+      final writer = TestBinaryWriter(writeCache);
+      adapter.write(writer, source);
+
+      final reader = TestBinaryReader(writeCache);
+      final restored = adapter.read(reader);
+
+      expect(restored.figuresJson, figuresJson);
     });
   });
 }

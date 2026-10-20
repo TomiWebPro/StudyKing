@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:studyking/core/data/models/source_figure.dart';
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 
 class ExtractionResult {
@@ -12,6 +13,12 @@ class ExtractionResult {
   final String? mimeType;
   final String? errorMessage;
   final List<SourceChunk> chunks;
+
+  /// Images (figures, charts, diagrams) discovered during extraction. `null`
+  /// when the extractor does not collect figures; an empty list when the
+  /// source had no figures. Persisted onto [Source.figuresJson] so figures
+  /// survive ingestion (Vision Next-Term §4.1 / agent_must_read.md §24).
+  final List<SourceFigure> figures;
 
   /// When `true`, the text was truncated to fit within the configured
   /// per-source character ceiling. The student should be told that content
@@ -32,6 +39,7 @@ class ExtractionResult {
     this.mimeType,
     this.errorMessage,
     this.chunks = const [],
+    this.figures = const [],
     this.truncated = false,
     this.truncationNote,
   });
@@ -52,12 +60,20 @@ class ExtractionResult {
       meta['truncated'] = true;
       if (truncationNote != null) meta['truncationNote'] = truncationNote;
     }
+    // Vision integrity: record how many figures survived extraction so the
+    // mentor pipeline and tests can audit figure retention (agent_must_read.md
+    // §24 / Vision Next-Term §4.1).
+    if (figures.isNotEmpty) meta['figureCount'] = figures.length;
     return meta;
   }
 
-  /// Serializes chunks to a valid JSON string that [SourceChunk.parse] can
-  /// round-trip. Returns `''` when there are no chunks so the storage column
-  /// stays empty (not `'[]'`).
+  /// Serializes figures to a JSON string that [SourceFigure.parse] can
+  /// round-trip. Returns `''` when there are no figures so the storage column
+  /// stays empty (not `'[]'`), matching [SourceChunk] conventions.
+  String figuresToJson() {
+    if (figures.isEmpty) return '';
+    return SourceFigure.encode(figures);
+  }
   String chunksToJson() {
     if (chunks.isEmpty) return '';
     return jsonEncode(chunks.map((c) => c.toJson()).toList());

@@ -1,6 +1,7 @@
 import 'dart:async' show TimeoutException;
 import 'dart:convert' show utf8, jsonDecode, jsonEncode;
 import 'dart:io' show Directory;
+import 'dart:typed_data' show Uint8List;
 import 'package:crypto/crypto.dart' show sha256;
 
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import 'package:studyking/core/data/extraction/pdf_extractor.dart';
 import 'package:studyking/core/data/extraction/transcription_extractor.dart';
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/data/models/source_figure.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -537,6 +539,60 @@ void main() {
       expect(src.topicId, 'topic-1');
       expect(src.summary, 'fake summary');
       expect(src.processingStatus, 'completed');
+    });
+
+    test('persists figures from extraction result onto the Source', () async {
+      final figures = [
+        SourceFigure(
+          pageNumber: 1,
+          bytes: Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]),
+          caption: 'Revenue chart',
+          mimeType: 'image/jpeg',
+          source: 'pdf',
+        ),
+      ];
+      final docExtractor = FakeDocumentExtractor(ExtractionResult(
+        text: 'extracted text with a chart on page 1',
+        extractionMethod: 'pdf_text_direct',
+        figures: figures,
+      ));
+      final sourceRepo = FakeSourceRepository();
+
+      final pipeline = buildPipeline(
+        docExtractor: docExtractor,
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: sourceRepo,
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
+      );
+
+      expect(result.isSuccess, isTrue);
+      final stored = sourceRepo.getStored(result.data!.id);
+      expect(stored, isNotNull);
+      expect(stored!.figuresJson, isNotEmpty);
+      // The persisted figuresJson must round-trip back to the same figures.
+      final parsed = SourceFigure.parse(stored.figuresJson);
+      expect(parsed.length, 1);
+      expect(parsed[0].pageNumber, 1);
+      expect(parsed[0].caption, 'Revenue chart');
+      expect(parsed[0].mimeType, 'image/jpeg');
     });
 
     test('routes per-task models to classification, summarization and generation', () async {
