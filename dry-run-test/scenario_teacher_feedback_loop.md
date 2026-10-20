@@ -14,8 +14,8 @@
 | Step | Expectation | Current code | Status |
 |------|------------|-------------|--------|
 | 1. Student says "this is too fast" mid-lesson | The tutor should detect the pacing feedback, slow down, and offer a more granular explanation or simpler example. | `lib/features/teaching/services/tutor_service.dart:59` — TutorService holds `_llmAgent`. `lib/features/teaching/services/prompts/prompts.dart:70-89` — `buildTutorPrompt` injects `feedbackContext` but it is not populated from student utterances "too fast/slow". | PARTIAL |
-| 2. Tutor offers a simpler explanation | The system should vary explanation style (visual, real-world analogy, step-by-step). | `lib/core/data/enums.dart:48-49` — `LessonBlockType` now includes `visual` and `analogy` variants. `lib/features/mentor/services/tools/explain_differently_tool.dart` — `ExplainDifferentlyTool` registered at `llm_agent_providers.dart:282`. However, teaching mode calls `LlmService.chatStream()` directly (bypassing `AgentLoop`), so tools cannot be invoked at runtime to vary explanations. | PARTIAL |
-| 3. Student gets a question wrong during practice | The tutor should ask "which part confused you?" and redirect to a prerequisite topic or simpler question. | `lib/features/practice/services/readiness_scorer.dart:16` — readiness scoring exists. `lib/features/mentor/services/tools/get_weak_topics_tool.dart:9` — identifies weak areas. But the **teaching** flow (`tutor_service.dart`) does not invoke readiness scoring during lessons. | FAIL |
+| 2. Tutor offers a simpler explanation | The system should vary explanation style (visual, real-world analogy, step-by-step). | `lib/core/data/enums.dart:48-49` — `LessonBlockType` now includes `visual` and `analogy` variants. `lib/features/mentor/services/tools/explain_differently_tool.dart` — `ExplainDifferentlyTool` registered at `llm_agent_providers.dart:90`. Teaching mode now routes live turns through `AgentLoop` (`conversation_manager.dart:446-459`, `tutor_service.dart:306`), so the tool CAN be invoked at runtime to vary explanations. | PASS |
+| 3. Student gets a question wrong during practice | The tutor should ask "which part confused you?" and redirect to a prerequisite topic or simpler question. | `lib/features/practice/services/readiness_scorer.dart:16` — readiness scoring exists. `lib/features/mentor/services/tools/get_weak_topics_tool.dart:9` — identifies weak areas. Teaching mode now routes through `AgentLoop` (`conversation_manager.dart:446-459`, `tutor_service.dart:306`), so the LLM CAN invoke `get_weak_topics` and `suggest_practice` during lessons. The confusion directive (`prompts.dart:89-92`) directs the LLM to suggest practice when confusion persists. | PASS |
 | 4. After lesson, system summarises mastery | The mentor should show what was mastered, what needs review, and schedule a follow-up if needed. | `lib/core/services/study_progress_tracker.dart:1` — tracks attempts/sessions. `lib/core/data/models/mastery_state_model.dart:1` — mastery model. `get_student_stats_tool.dart:9` — surfaces stats but is a mentor tool, not invoked post-teaching. | PARTIAL |
 | 5. Student provides explicit feedback | The feedback should be logged and influence future lesson recommendations (learning method analytics). | `lib/core/services/learning_method_analytics_service.dart:1` — tracks preferred block type, optimal session length, visual preference. `lib/features/teaching/data/repositories/conversation_repository.dart` — persists conversation data. Feedback is logged but not explicitly fed back into lesson generation. | PARTIAL |
 
@@ -31,11 +31,15 @@
 | `explain_differently` (request a different explanation modality) | YES | `lib/features/mentor/services/tools/explain_differently_tool.dart` — LLM-backed tool generating visual, analogy, or step-by-step explanations. `LessonBlockType` now has `visual` and `analogy` variants. |
 | `suggest_practice` (redirect to prerequisite practice) | YES | `lib/features/mentor/services/tools/suggest_practice_tool.dart` — callback-based tool querying mastery data for weak-topic recommendations. |
 
-**Gap:** Teaching mode has no `explain_differently` or `suggest_practice` agent tools
-in its system prompt, and teaching mode bypasses `AgentLoop` — so even though the tools
-are registered in the agent registry, they cannot be invoked during lessons.
-→ Teaching-mode context-injection tracked as OPEN gap.
-→ File `issues/open/scenario-teaching-agentloop-bypass.md`
+**Gap:** RESOLVED — Teaching mode now routes live turns through `AgentLoop`
+(`conversation_manager.dart:446-459` via `agentLoop.runStream`,
+`tutor_service.dart:306` passes `agentLoop: _llmAgent?.loop`), so
+`explain_differently` and `suggest_practice` tools CAN be invoked during lessons.
+The e2e test at `scenario_validation_test.dart` Step 3-4 proves the tool-call trace:
+student gets a question wrong → `TOOL_CALL: get_weak_topics`, then "I still don't get
+it" → `TOOL_CALL: suggest_practice` invoked through AgentLoop. Remaining gap: active
+lesson block info is not injected into the teaching context prompt.
+→ File `issues/open/scenario-practice-readiness-not-injected.md`
 
 ### Context the LLM needs vs. what AgentLoop injects
 
@@ -43,38 +47,41 @@ are registered in the agent registry, they cannot be invoked during lessons.
 |---|---|---|
 | Conversation history (prior failed explanations) | YES | `lib/core/services/conversation_memory.dart` — `ConversationMemory` persists history. |
 | Current lesson block type and content | NO | No context builder for active lesson blocks in teaching mode. |
-| Available explanation modalities (text, example, visual, analogy) | NO | Not described in the teaching system prompt (`prompts.dart:70-89`). |
+| Available explanation modalities (text, example, visual, analogy) | YES | `prompts.dart:89-92` — confusion directive injects modality guidance (analogy, visual, step-by-step) at `confusionCount >= 2`. AgentLoop wiring (`conversation_manager.dart:446-459`, `tutor_service.dart:306`) allows tools to act on it. |
 | Learning method analytics (prefers visual, optimal session length) | PARTIAL | `learning_method_analytics_service.dart:1` exists but is not injected into teaching prompt. |
 
-**Gap:** Teaching context lacks active lesson block info and explanation modality options.
-→ File `issues/open/scenario-teaching-agentloop-bypass.md`
+**Gap:** Teaching context still lacks active lesson block info and readiness scores
+(not injected into the teaching prompt). Explanation modality options are now
+resolved via the confusion directive + AgentLoop wiring.
+→ File `issues/open/scenario-practice-readiness-not-injected.md`
 
 ## Comprehension rubric
 
 | Criterion | Assessment |
 |---|---|
 | Reading level | PASS — `l10n` strings keep language accessible. |
-| Actionability (one clear next action) | FAIL — after "I don't get it," no single clear next action is offered. |
+| Actionability (one clear next action) | PASS — after confusion persists, `suggest_practice` tool offers a clear next action (practice session on prerequisite); `get_weak_topics` identifies the specific gap. |
 | Confirmation discipline | PASS — no schedule changes in this flow. |
 
 ## Validation Results
 
 Traced against code at:
-`lib/features/teaching/services/tutor_service.dart:59-110`,
-`lib/features/teaching/services/prompts/prompts.dart:70-89`,
+`lib/features/teaching/services/tutor_service.dart:59-110,306`,
+`lib/features/teaching/services/conversation_manager.dart:446-459`,
+`lib/features/teaching/services/prompts/prompts.dart:89-92`,
 `lib/features/lessons/data/models/lesson_block_model.dart` (LessonBlockType enum),
 `lib/core/services/learning_method_analytics_service.dart:1`,
 `lib/features/mentor/services/tools/explain_differently_tool.dart`,
 `lib/features/mentor/services/tools/suggest_practice_tool.dart`,
 `lib/core/data/enums.dart` (LessonBlockType: visual, analogy added).
 
-- Step 1: PARTIAL — pacing feedback not explicitly handled in teaching prompt.
-- Step 2: PASS — `explain_differently` tool registered; `LessonBlockType` has `visual`/`analogy`.
-- Step 3: FAIL — teaching mode does not invoke readiness scoring or weak-topic tools.
+- Step 1: PARTIAL — pacing feedback not explicitly handled in teaching prompt (`feedbackContext` not populated from student utterances "too fast/slow").
+- Step 2: PASS — `explain_differently` tool registered (`llm_agent_providers.dart:90`); `LessonBlockType` has `visual`/`analogy` (`enums.dart:48-49`); AgentLoop wired into teaching (`conversation_manager.dart:446-459`, `tutor_service.dart:306`).
+- Step 3: PASS — teaching mode now invokes `get_weak_topics` + `suggest_practice` through AgentLoop (traced in `scenario_validation_test.dart` Step 3-4).
 - Step 4: PARTIAL — mastery stats exist but not surfaced post-lesson automatically.
 - Step 5: PARTIAL — feedback is logged but not fed back into lesson generation.
 
 Tool audit: 5 of 5 needed tools exist (`explain_differently` and `suggest_practice` registered).
 RESULT: all needed tools available (0 missing).
-Context audit: active lesson blocks and modality options not injected into teaching prompt → open issue (`scenario-teaching-agentloop-bypass.md`).
-**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `prompts.dart:89-92`, `enums.dart:48-49`, `llm_agent_providers.dart:282`).
+Context audit: active lesson block info and readiness scores not injected into teaching prompt → open issue (`scenario-practice-readiness-not-injected.md`). Modality options now resolved.
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `prompts.dart:89-92`, `enums.dart:48-49`, `llm_agent_providers.dart:90-95`, `conversation_manager.dart:446-459`, `tutor_service.dart:306`).
