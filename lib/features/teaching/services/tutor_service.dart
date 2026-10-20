@@ -190,6 +190,12 @@ class TutorService {
       clock: _clock,
       localeName: localeName,
       voiceService: _voiceService,
+      // Route live teaching turns through the AgentLoop tool-calling loop so
+      // the LLM can invoke teaching tools (explain_differently, suggest_practice,
+      // read_source_content, review_mistakes, …) — Vision Next-Term §3.1.
+      // Sourced from the LlmAgent TutorScreen already injected via llmAgent;
+      // null (no API key) keeps teaching working offline via direct chat.
+      agentLoop: _llmAgent?.loop,
     );
 
     String? lessonPlanError;

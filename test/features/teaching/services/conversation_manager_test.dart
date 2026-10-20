@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm/model_router.dart';
+import 'package:studyking/core/services/llm_agent/agent_loop.dart';
+import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
@@ -147,6 +149,76 @@ class RichResultEvaluator extends ExerciseEvaluator {
       partialCredit: 0.5,
       conceptBreakdown: {'ConceptA': 0.9, 'ConceptB': 0.7},
     ));
+  }
+}
+
+/// Hand-written fake [AgentTool] that records whether it was invoked and with
+/// what arguments, returning a scripted alternative explanation. Used to assert
+/// that live teaching turns route through the AgentLoop and actually execute
+/// teaching tools (Vision Next-Term §3.1: explain differently when confused).
+class _ExplainDifferentlyFakeTool extends AgentTool {
+  bool invoked = false;
+  Map<String, dynamic> capturedArgs = {};
+  int executeCallCount = 0;
+
+  @override
+  String get name => 'explain_differently';
+
+  @override
+  String get description => 'Re-explain a concept with an alternative approach';
+
+  @override
+  Map<String, dynamic> get parameters => {
+        'concept': {'type': 'string', 'description': 'The concept to re-explain'},
+      };
+
+  @override
+  Future<dynamic> execute(Map<String, dynamic> args) async {
+    invoked = true;
+    executeCallCount++;
+    capturedArgs = Map<String, dynamic>.from(args);
+    return {'explanation': 'Imagine fractions as slices of a pizza.'};
+  }
+}
+
+/// Hand-written fake [LlmService] that scripts streaming replies — including
+/// `TOOL_CALL:` / `ARGUMENTS:` markers — so the AgentLoop tool-calling path
+/// can be exercised end-to-end during teaching turns. Each scripted response is
+/// yielded word-by-word to exercise progressive streaming. Records the
+/// messages/history the loop sends on each LLM call so the think→act→observe
+/// turn structure can be asserted.
+class _ToolCallFakeLlmService extends LlmService {
+  final List<String> responses;
+  final List<String> messageCalls = [];
+  final List<List<Map<String, String>>> historyCalls = [];
+
+  _ToolCallFakeLlmService(this.responses)
+      : super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'test-key',
+          ),
+        );
+
+  @override
+  Stream<String> chatStream({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async* {
+    messageCalls.add(message);
+    historyCalls.add(List<Map<String, String>>.from(history ?? []));
+
+    final response = responses.removeAt(0);
+    final words = response.split(' ');
+    for (var i = 0; i < words.length; i++) {
+      final chunk = words[i] + (i < words.length - 1 ? ' ' : '');
+      yield chunk;
+    }
   }
 }
 
@@ -1019,6 +1091,102 @@ void main() {
         final evalMsg = systemMsgs.first;
         expect(evalMsg.content, contains('partialCredit'));
         expect(evalMsg.content, contains('conceptBreakdown'));
+      });
+    });
+
+    group('agentLoop tool-calling', () {
+      test('usesAgentLoop is true when an AgentLoop is provided', () {
+        final llm = _ToolCallFakeLlmService([]);
+        final loop = AgentLoop(
+          llmService: llm,
+          modelId: 'test-model',
+          toolRegistry: ToolRegistry()..register(_ExplainDifferentlyFakeTool()),
+        );
+        final m = ConversationManager(
+          llmService: llm,
+          modelId: 'test-model',
+          sessionId: 'agent-session',
+          studentId: 'student-123',
+          topicTitle: 'Fractions',
+          subjectId: 'math',
+          topicId: 't1',
+          exerciseEvaluator: exerciseEvaluator,
+          localeName: 'en',
+          agentLoop: loop,
+        );
+
+        expect(m.usesAgentLoop, isTrue);
+      });
+
+      test('routes teaching turns through AgentLoop so tools are invoked', () async {
+        // Scripted LLM output: a preamble, then a TOOL_CALL marker, then (after
+        // the tool executes) a follow-up reply. This exercises the full
+        // think→act→observe loop during a live teaching turn.
+        final llm = _ToolCallFakeLlmService([
+          'Let me think. TOOL_CALL: explain_differently\nARGUMENTS: {"concept": "fractions"}',
+          'Imagine fractions as slices of a pizza, like cutting a pie.',
+        ]);
+        final tool = _ExplainDifferentlyFakeTool();
+        final loop = AgentLoop(
+          llmService: llm,
+          modelId: 'test-model',
+          toolRegistry: ToolRegistry()..register(tool),
+        );
+
+        final m = ConversationManager(
+          llmService: llm,
+          modelId: 'test-model',
+          sessionId: 'agent-turn-session',
+          studentId: 'student-123',
+          topicTitle: 'Fractions',
+          subjectId: 'math',
+          topicId: 't1',
+          exerciseEvaluator: exerciseEvaluator,
+          localeName: 'en',
+          agentLoop: loop,
+        );
+        await m.initialize();
+
+        final responses = <String>[];
+        await for (final chunk in m.sendMessage('I do not understand fractions.')) {
+          responses.add(chunk);
+        }
+
+        // The registered teaching tool was actually invoked by the AgentLoop.
+        expect(tool.invoked, isTrue);
+        expect(tool.capturedArgs['concept'], equals('fractions'));
+
+        // Multiple LLM turns ran (think → act → observe), and the tool result
+        // was fed back to the LLM as the next message.
+        expect(llm.messageCalls.length, greaterThan(1));
+        expect(llm.messageCalls[0], equals('I do not understand fractions.'));
+        expect(llm.messageCalls[1], contains('Tool result for explain_different'));
+
+        // Tool-call syntax is never surfaced to the student.
+        expect(responses.any((c) => c.contains('TOOL_CALL')), isFalse);
+        expect(responses.any((c) => c.contains('ARGUMENTS')), isFalse);
+        expect(responses.any((c) => c.contains('explain_differently')), isFalse);
+
+        // The human-readable preamble and the post-tool reply are both yielded.
+        expect(responses.join(), contains('Let me think.'));
+        expect(responses.join(), contains('Imagine fractions as slices of a pizza'));
+
+        // The tool result is recorded as a system message for subsequent turns.
+        final systemMsgs = m.messages.where((msg) => msg.role == MessageRole.system);
+        expect(systemMsgs, isNotEmpty);
+        expect(systemMsgs.last.content, contains('explain_different'));
+        expect(systemMsgs.last.content, contains('Imagine'));
+      });
+
+      test('falls back to direct chatStream when no AgentLoop is wired', () async {
+        expect(manager.usesAgentLoop, isFalse);
+
+        final responses = await manager.sendMessage('Hello').toList();
+        expect(responses.join(), contains('Mock tutor response'));
+
+        // With the fallback path, the raw chatStream (not the AgentLoop)
+        // handles the turn — confirmed by the FakeLlmService capturing the call.
+        expect(llmService.lastFeature, equals('teaching'));
       });
     });
   });

@@ -9,6 +9,7 @@ import 'package:studyking/features/teaching/data/models/tutor_session_model.dart
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm_agent/agent_loop.dart';
 import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/core/constants/timeouts.dart';
 import 'package:studyking/core/utils/clock.dart';
@@ -34,6 +35,15 @@ class ConversationManager {
   final ConversationPromptSet _prompts;
   final Clock _clock;
   final VoiceService? _voiceService;
+
+  /// Optional AgentLoop that drives live tutoring turns through the
+  /// think→act→observe tool-calling loop (Vision Next-Term §3.1). When present,
+  /// [sendMessage] / [processImage] route through it so the LLM can invoke
+  /// teaching tools (explain_differently, suggest_practice, read_source_content,
+  /// review_mistakes, …). When absent (no API key configured), teaching
+  /// degrades to a direct chat stream so it still works offline.
+  final AgentLoop? _agentLoop;
+
   bool enableVoiceOutput = false;
   bool reduceMotion = false;
 
@@ -52,6 +62,12 @@ class ConversationManager {
   /// §3.1: the tutor must know which syllabi are available so the student can
   /// switch mid-lesson). Exposed so behaviour can be asserted in tests.
   List<SyllabusGoal> get availableSyllabi => List.unmodifiable(_availableSyllabi);
+
+  /// Whether live tutoring turns are routed through the AgentLoop tool-calling
+  /// infrastructure. Present only when a configured LlmAgent was injected;
+  /// absent (null) lets teaching fall back to a direct chat stream so it still
+  /// works without an API key.
+  bool get usesAgentLoop => _agentLoop != null;
   String? _currentSyllabusId;
   String? _currentSyllabusTitle;
   final List<SyllabusGoal> _availableSyllabi;
@@ -104,6 +120,7 @@ class ConversationManager {
     required this.localeName,
     VoiceService? voiceService,
     this.learningPreferences,
+    AgentLoop? agentLoop,
   })  : _llmService = llmService,
         _modelId = modelId,
         _persistenceRepo = persistenceRepo,
@@ -111,6 +128,7 @@ class ConversationManager {
         _prompts = prompts ?? ConversationPromptSet(localeName: localeName),
         _clock = clock ?? SystemClock(),
         _voiceService = voiceService,
+        _agentLoop = agentLoop,
         sessionStartTime = (clock ?? SystemClock()).now(),
         _availableSyllabi = availableSyllabi,
         _memory = ConversationMemory(
@@ -290,10 +308,8 @@ class ConversationManager {
     );
 
     try {
-      await for (final chunk in _llmService.chatStream(
-        message: content,
-        modelId: _modelId,
-        memory: _memory,
+      await for (final chunk in _turnStream(
+        userMessage: content,
         systemPrompt: '${entry.systemPrompt}\n\n${entry.userPrompt}',
         // Live tutoring turns must be attributable in the LLM task-manager
         // portal (Vision Next-Term §0 thesis: students steer where tokens go).
@@ -357,10 +373,8 @@ class ConversationManager {
       // spend (Vision Next-Term §0 thesis: students steer where tokens go).
       // 'teaching_image_analysis' maps to LlmTaskType.tutor via
       // LlmTaskType.fromFeature('teaching'), instead of leaking into 'unknown'.
-      await for (final chunk in _llmService.chatStream(
-        message: message,
-        modelId: _modelId,
-        memory: _memory,
+      await for (final chunk in _turnStream(
+        userMessage: message,
         systemPrompt: l10n.tutorImageAnalysisSystemPrompt,
         feature: 'teaching_image_analysis',
       )) {
@@ -381,6 +395,60 @@ class ConversationManager {
     totalTokensUsed += assistantContent.length ~/ 4;
     { final memResult = await _memory.addAssistantMessage(assistantContent); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
     _speakResponse(assistantContent);
+  }
+
+  /// Builds the reply stream for a single live-tutoring turn.
+  ///
+  /// When an [AgentLoop] is wired, the turn is routed through the think→act→
+  /// observe loop so the LLM can invoke any of the tools registered for
+  /// teaching mode (Vision Next-Term §3.1 / scenario_confused_student_fractions:
+  /// `explain_differently`; §3.1 / scenario_practice_mistake_review:
+  /// `review_mistakes`; source grounding via `read_source_content` /
+  /// `search_sources`; weak-topic practice via `suggest_practice`). Tool-call
+  /// syntax is buffered and stripped by the loop — only human-readable text is
+  /// yielded to the caller, and tool results are recorded as system messages in
+  /// conversation memory so subsequent turns see them (mirroring the mentor
+  /// flow in mentor_service.dart).
+  ///
+  /// When no agent is configured (e.g. no API key), this falls back to a direct
+  /// chat stream so teaching degrades gracefully offline.
+  Stream<String> _turnStream({
+    required String userMessage,
+    required String systemPrompt,
+    required String feature,
+  }) {
+    final agentLoop = _agentLoop;
+    if (agentLoop != null) {
+      final history = ConversationMemory.fromConversationMessages(
+        _memory.getHistory(),
+      );
+      return agentLoop.runStream(
+        userMessage: userMessage,
+        studentId: studentId,
+        systemPrompt: systemPrompt,
+        feature: feature,
+        history: history,
+        onToolCall: _recordToolCallInMemory,
+      );
+    }
+    return _llmService.chatStream(
+      message: userMessage,
+      modelId: _modelId,
+      memory: _memory,
+      systemPrompt: systemPrompt,
+      feature: feature,
+    );
+  }
+
+  /// Records a completed tool call as a system message in conversation memory so
+  /// the tutor can reference prior tool results in later turns (mirrors the
+  /// mentor `onToolCall` handler in mentor_service.dart).
+  Future<void> _recordToolCallInMemory(AgentToolCall call) async {
+    final toolMsg = '[${call.toolName}] ${call.result ?? 'executed'}';
+    final memResult = await _memory.addSystemMessage(toolMsg);
+    if (memResult.isFailure) {
+      _logger.w('Failed to persist tool message: ${memResult.error}');
+    }
   }
 
   String get providerName => _llmService.config.provider.name;
