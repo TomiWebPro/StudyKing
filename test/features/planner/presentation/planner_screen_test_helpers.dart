@@ -28,6 +28,7 @@ import 'package:studyking/features/planner/presentation/planner_screen.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FakePlanRepository extends PlanRepository {
@@ -351,6 +352,7 @@ Widget buildPlannerTestApp({
   String? fixedStudentId,
   NavigatorObserver? navigatorObserver,
   RouteFactory? onGenerateRoute,
+  Clock? clock,
 }) {
   final id = fixedStudentId ?? 'test-student';
   final repo = masteryGraphRepository ?? FakeMasteryGraphRepository();
@@ -382,6 +384,7 @@ Widget buildPlannerTestApp({
       plannerServiceProvider.overrideWith((ref) => svc),
       subjectRepositoryProvider.overrideWith((ref) => subjectRepo),
       topicRepositoryProvider.overrideWith((ref) => topicRepo),
+      if (clock != null) clockProvider.overrideWithValue(clock),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

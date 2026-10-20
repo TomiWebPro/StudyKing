@@ -1,8 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'planner_screen_test_helpers.dart';
+
+/// Fixed clock for deterministic time-based tests.
+class _FixedClock implements Clock {
+  final DateTime _now;
+  _FixedClock(this._now);
+  @override
+  DateTime now() => _now;
+}
 
 void main() {
   group('PlannerScreen - Roadmaps tab', () {
@@ -478,6 +487,45 @@ void main() {
 
       final daysField = tester.widget<TextField>(find.byType(TextField).at(1));
       expect(daysField.controller?.text, '0');
+    });
+
+    testWidgets('editing a roadmap pre-fills calendar days, not elapsed hours (DST spring-forward simulation)', (tester) async {
+      final roadmapRepo = FakeRoadmapRepository();
+      // Simulate a DST spring-forward where one calendar day is 23h long.
+      // Clock reads 23:00 on day 0; target is at 22:00 on day 31 —
+      // 31 calendar days but only 743 elapsed hours (31*24 - 1).
+      // The old difference().inDays would truncate 743h → 30 days,
+      // but _calendarDayDiff correctly returns 31 calendar days.
+      final clockNow = DateTime(2025, 3, 8, 23, 0);
+      final target = DateTime(2025, 4, 8, 22, 0);
+      final roadmap = RoadmapModel(
+        id: 'rm-edit-dst',
+        studentId: 'test-student',
+        goal: 'DST test',
+        createdAt: clockNow.subtract(const Duration(days: 60)),
+        targetCompletionDate: target,
+        milestones: [],
+        status: 'active',
+      );
+      await roadmapRepo.saveRoadmap(roadmap);
+
+      await tester.pumpWidget(buildPlannerTestApp(
+        roadmapRepository: roadmapRepo,
+        fixedStudentId: 'test-student',
+        clock: _FixedClock(clockNow),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Roadmaps'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+
+      final daysField = tester.widget<TextField>(find.byType(TextField).at(1));
+      expect(daysField.controller?.text, '31');
     });
   });
 }
