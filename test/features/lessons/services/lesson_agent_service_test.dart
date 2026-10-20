@@ -461,5 +461,106 @@ void main() {
         );
       });
     });
+
+    group('_parseBlocksFromText markers', () {
+      test('parses #visual: marker as visual block', () async {
+        // Non-JSON text triggers the _parseBlocksFromText fallback path.
+        fakeLlm.setResult(Result.success(
+          '#slide: Intro\n#visual:\nflowchart TD\nA --> B',
+        ));
+
+        final lesson = await service.generateLesson(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Topic',
+          localeName: 'en',
+        );
+
+        expect(lesson, isNotNull);
+        expect(lesson!.blocks.length, 2);
+        expect(lesson.blocks[0].type, LessonBlockType.slide);
+        expect(lesson.blocks[0].content, 'Intro');
+        expect(lesson.blocks[1].type, LessonBlockType.visual);
+        expect(lesson.blocks[1].content, contains('flowchart TD'));
+      });
+
+      test('parses visual: marker (without hash) as visual block', () async {
+        fakeLlm.setResult(Result.success(
+          'visual:\nbarChart\nQ1 30',
+        ));
+
+        final lesson = await service.generateLesson(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Topic',
+          localeName: 'en',
+        );
+
+        expect(lesson, isNotNull);
+        expect(lesson!.blocks.length, 1);
+        expect(lesson.blocks[0].type, LessonBlockType.visual);
+        expect(lesson.blocks[0].content, contains('barChart'));
+      });
+
+      test('parses #analogy: marker as analogy block', () async {
+        fakeLlm.setResult(Result.success(
+          '#analogy:\nLife is like a box of chocolates',
+        ));
+
+        final lesson = await service.generateLesson(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Topic',
+          localeName: 'en',
+        );
+
+        expect(lesson, isNotNull);
+        expect(lesson!.blocks.length, 1);
+        expect(lesson.blocks[0].type, LessonBlockType.analogy);
+        expect(lesson.blocks[0].content, contains('box of chocolates'));
+      });
+
+      test('parses analogy: marker (without hash) as analogy block', () async {
+        fakeLlm.setResult(Result.success(
+          'analogy:\nLearning is like tending a garden',
+        ));
+
+        final lesson = await service.generateLesson(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Topic',
+          localeName: 'en',
+        );
+
+        expect(lesson, isNotNull);
+        expect(lesson!.blocks.length, 1);
+        expect(lesson.blocks[0].type, LessonBlockType.analogy);
+        expect(lesson.blocks[0].content, contains('tending a garden'));
+      });
+
+      test('preserves order and types across multiple markers', () async {
+        fakeLlm.setResult(Result.success(
+          '#slide: Intro\n'
+          '#visual:\nflowchart LR\nX --> Y\n'
+          '#analogy:\nAnalogy text',
+        ));
+
+        final lesson = await service.generateLesson(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Topic',
+          localeName: 'en',
+        );
+
+        expect(lesson, isNotNull);
+        expect(lesson!.blocks.length, 3);
+        expect(lesson.blocks[0].type, LessonBlockType.slide);
+        expect(lesson.blocks[0].content, 'Intro');
+        expect(lesson.blocks[1].type, LessonBlockType.visual);
+        expect(lesson.blocks[1].content, contains('flowchart LR'));
+        expect(lesson.blocks[2].type, LessonBlockType.analogy);
+        expect(lesson.blocks[2].content, 'Analogy text');
+      });
+    });
   });
 }

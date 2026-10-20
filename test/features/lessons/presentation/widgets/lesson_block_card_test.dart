@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/widgets/mermaid_diagram.dart';
 import 'package:studyking/features/lessons/presentation/widgets/lesson_block_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -670,6 +671,71 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('First slide'), findsAtLeastNWidgets(1));
       expect(find.text('1 / 2'), findsWidgets);
+    });
+  });
+
+  group('LessonBlockCard - Visual / Analogy', () {
+    testWidgets('renders visual block with insights icon and Visual label',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(block: block(
+          type: LessonBlockType.visual,
+          content: 'A simple explanation without diagrams',
+        )),
+      ));
+
+      expect(find.byIcon(Icons.insights), findsOneWidget);
+      expect(find.text('Visual'), findsOneWidget);
+      expect(find.text('A simple explanation without diagrams'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders analogy block with compare icon and Analogy label',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(block: block(
+          type: LessonBlockType.analogy,
+          content: 'Learning is like tending a garden',
+        )),
+      ));
+
+      expect(find.byIcon(Icons.compare), findsOneWidget);
+      expect(find.text('Analogy'), findsOneWidget);
+      expect(find.text('Learning is like tending a garden'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders mermaid diagram inside visual block instead of raw code',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(block: block(
+          type: LessonBlockType.visual,
+          content: '```mermaid\nflowchart TD\nA[Start] --> B[End]\n```',
+        )),
+      ));
+
+      expect(find.byType(MermaidDiagram), findsOneWidget);
+      expect(find.text('Start'), findsOneWidget);
+      expect(find.text('End'), findsOneWidget);
+      // Raw Mermaid source must never be visible.
+      expect(find.text('flowchart TD'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders mermaid diagram inside analogy block', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(block: block(
+          type: LessonBlockType.analogy,
+          content: '```mermaid\npie title Parts\n"Head" : 75\n"Tail" : 25\n```',
+        )),
+      ));
+
+      expect(find.byType(MermaidDiagram), findsOneWidget);
+      expect(find.text('Parts'), findsOneWidget);
+      expect(find.text('Head (75%)'), findsOneWidget);
+      expect(find.text('Tail (25%)'), findsOneWidget);
+      expect(find.text('pie title Parts'), findsNothing);
+      expect(tester.takeException(), isNull);
     });
   });
 }

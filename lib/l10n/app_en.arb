@@ -2460,6 +2460,14 @@
   "@blockTypeSummary": {
     "description": "Label for summary block type"
   },
+  "blockTypeVisual": "Visual",
+  "@blockTypeVisual": {
+    "description": "Label for visual/diagram block type"
+  },
+  "blockTypeAnalogy": "Analogy",
+  "@blockTypeAnalogy": {
+    "description": "Label for analogy block type"
+  },
   "practiceModeType": "{mode} - {type}",
   "@practiceModeType": {
     "description": "App bar title with practice mode and question type",

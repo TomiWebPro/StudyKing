@@ -225,6 +225,34 @@ class LessonAgentService {
         }
         currentType = LessonBlockType.example;
         buffer.writeln(line.replaceFirst(RegExp(r'^#?example:\s*', caseSensitive: false), ''));
+      } else if (trimmed.startsWith('#visual') || trimmed.startsWith('visual:')) {
+        if (currentType != null && buffer.isNotEmpty) {
+          blocks.add(LessonBlock(
+            id: const Uuid().v4(),
+            subjectId: subjectId,
+            lessonId: '',
+            type: currentType,
+            content: buffer.toString().trim(),
+            order: order++,
+          ));
+          buffer.clear();
+        }
+        currentType = LessonBlockType.visual;
+        buffer.writeln(line.replaceFirst(RegExp(r'^#?visual:\s*', caseSensitive: false), ''));
+      } else if (trimmed.startsWith('#analogy') || trimmed.startsWith('analogy:')) {
+        if (currentType != null && buffer.isNotEmpty) {
+          blocks.add(LessonBlock(
+            id: const Uuid().v4(),
+            subjectId: subjectId,
+            lessonId: '',
+            type: currentType,
+            content: buffer.toString().trim(),
+            order: order++,
+          ));
+          buffer.clear();
+        }
+        currentType = LessonBlockType.analogy;
+        buffer.writeln(line.replaceFirst(RegExp(r'^#?analogy:\s*', caseSensitive: false), ''));
       } else {
         currentType ??= LessonBlockType.text;
         buffer.writeln(line);

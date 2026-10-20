@@ -1873,6 +1873,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get blockTypeSummary => 'Summary';
 
   @override
+  String get blockTypeVisual => 'Visual';
+
+  @override
+  String get blockTypeAnalogy => 'Analogy';
+
+  @override
   String practiceModeType(String mode, String type) {
     return '$mode - $type';
   }

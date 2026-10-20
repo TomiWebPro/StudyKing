@@ -46,9 +46,9 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
       case LessonBlockType.text:
         return _buildTextCard(context);
       case LessonBlockType.visual:
-        return _buildTextCard(context);
+        return _buildVisualCard(context, isAnalogy: false);
       case LessonBlockType.analogy:
-        return _buildTextCard(context);
+        return _buildVisualCard(context, isAnalogy: true);
     }
   }
 
@@ -458,6 +458,46 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
             RichContentRenderer(
               content: widget.block.content,
               textStyle: theme.textTheme.bodyLarge,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVisualCard(BuildContext context, {required bool isAnalogy}) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final cs = theme.colorScheme;
+    final icon = isAnalogy ? Icons.compare : Icons.insights;
+    final label = isAnalogy ? l10n.blockTypeAnalogy : l10n.blockTypeVisual;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: cs.tertiary, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Semantics(
+              label: label,
+              child: RichContentRenderer(
+                content: widget.block.content,
+                textStyle: theme.textTheme.bodyLarge,
+              ),
             ),
           ],
         ),

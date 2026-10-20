@@ -3266,6 +3266,18 @@ abstract class AppLocalizations {
   /// **'Summary'**
   String get blockTypeSummary;
 
+  /// Label for visual/diagram block type
+  ///
+  /// In en, this message translates to:
+  /// **'Visual'**
+  String get blockTypeVisual;
+
+  /// Label for analogy block type
+  ///
+  /// In en, this message translates to:
+  /// **'Analogy'**
+  String get blockTypeAnalogy;
+
   /// App bar title with practice mode and question type
   ///
   /// In en, this message translates to:
