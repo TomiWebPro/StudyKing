@@ -30,6 +30,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     if (shouldThrow) throw Exception('Simulated LLM transport error');
     if (shouldFail) return Result.failure('Simulated LLM failure');

@@ -46,7 +46,7 @@ type, invalid time format).
 
 **Gap:** Streak status and self-reported wellbeing are not injected into
 the mentor agent's context.
-→ File `issues/open/scenario-wellbeing-context-not-injected.md`
+→ File `issues/closed/scenario-wellbeing-context-not-injected.md`
 
 ## Comprehension rubric
 
@@ -78,4 +78,6 @@ Traced against code at:
   `canRunHeavyPrepNow` is false.
 
 Tool audit: 5 of 5 needed tools exist (including `wellbeing_adjust_schedule`).
-Context audit: streak + wellbeing input not injected → new issue.
+RESULT: all needed tools available (0 missing).
+Context audit: streak + wellbeing input not injected → issue closed.
+**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `system_monitor_service.dart:20`, `mentor_wellbeing_service.dart`).

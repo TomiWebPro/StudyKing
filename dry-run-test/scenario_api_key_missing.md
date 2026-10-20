@@ -15,7 +15,7 @@
 | 2. User navigates to Settings → AI Provider | Should see: OpenRouter, OpenAI, Ollama (local), Custom. Each with fields for API key, base URL, model name. Ollama should default to `http://localhost:11434`. | `lib/features/settings/` — settings screen exists. `lib/core/constants/app_api_config.dart:59-64` — Ollama/OpenAI default URLs. | PASS |
 | 3. User selects Ollama (local, no key) | App should work without an API key when using Ollama. No key field should be required. | `lib/core/constants/app_api_config.dart:24` — `ApiSecrets.fromEnvironment` throws only in production if `openRouterApiKey.isEmpty`; Ollama config has no key requirement (`backupApiKey: null` in B4 example, line 25). `lib/core/providers/llm_providers.dart` — provider config stored in settings. | PASS |
 | 4. User is offline / has poor connection | If the API call times out or fails, the app should fall back to the backup provider (B4 failover) and show a retry option. | `lib/core/services/llm/llm_chat_service.dart:180-234` — `_streamWithFallback` and `_callWithFallback` retry with backup on 5xx/timeout/connection failure. `lib/core/constants/timeouts.dart` — timeouts defined per environment. | PASS |
-| 5. User is on a low-end device (low battery, high CPU) | Heavy prep tasks (embeddings, question generation) should defer until conditions improve. | `docs/vision_next_term.md` §4.3 — `SystemMonitorService` is proposed but not yet implemented. No `canRunHeavyPrepNow()` method exists. | FAIL |
+| 5. User is on a low-end device (low battery, high CPU) | Heavy prep tasks (embeddings, question generation) should defer until conditions improve. | `lib/core/services/system_monitor_service.dart:20-26` — `SystemMonitorService.canRunHeavyPrepNow` checks battery + CPU + saver; `NoopSystemMonitorService` and `PlatformSystemMonitorService` implemented. `lib/core/services/llm_agent/idle_executor.dart:240-255` consults it before heavy tasks. Wired at `lib/core/providers/llm_providers.dart:28`. | PASS |
 | 6. User has no subjects but opens the mentor chat | App should guide the user to create a plan or add a subject, not show a generic error. | `lib/features/mentor/services/mentor_service.dart:163-171` — `hasMeaningfulData()` returns false when no subjects, yields `l10n.mentorNoSubjects`. | PARTIAL |
 
 ## Tool/context audit
@@ -42,7 +42,7 @@ No missing-tools issue for this scenario — all needed tools exist.
 **Gap:** AgentLoop cannot inform the LLM about offline status or provider
 configuration, so it cannot proactively suggest "switch to Ollama" or
 "wait until you're online."
-→ File `issues/open/scenario_offline-context-not-injected.md`
+→ File `issues/closed/scenario-offline-context-not-injected.md`
 
 ## Comprehension rubric
 
@@ -66,8 +66,10 @@ Traced against code at:
 - Step 2: PASS — Settings → AI Provider screen exists.
 - Step 3: PASS — Ollama works without API key.
 - Step 4: PASS — B4 failover + timeouts handle network issues.
-- Step 5: FAIL — SystemMonitorService not yet implemented.
+- Step 5: PASS — SystemMonitorService implemented at `system_monitor_service.dart:20` with `canRunHeavyPrepNow`, consulted by `IdleExecutor` before heavy tasks.
 - Step 6: PARTIAL — `mentorNoSubjects` guides but doesn't suggest creating a plan inline.
 
-Context audit: offline/provider config not injected → new issue.
+Context audit: provider/offline/battery status not injected into mentor context → closed issue.
+**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–6, `system_monitor_service.dart:20`).
 Tool audit: no missing tools for this scenario.
+RESULT: all needed tools available (0 missing).

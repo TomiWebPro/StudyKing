@@ -52,6 +52,7 @@ class FakeAgentLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     chatMessages.add(message);
     chatModels.add(modelId);
@@ -110,6 +111,7 @@ class FakeStreamingLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
     chatMessages.add(message);
     chatModels.add(modelId);
@@ -248,6 +250,7 @@ class FailingAgentLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     chatMessages.add(message);
     return Result.failure(errorMessage);

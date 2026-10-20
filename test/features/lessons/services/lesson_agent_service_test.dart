@@ -44,6 +44,7 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     lastFeature = feature;
     featureHistory.add(feature);

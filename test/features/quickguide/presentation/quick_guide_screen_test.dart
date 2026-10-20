@@ -31,6 +31,7 @@ class _DelayedErrorLlmService extends FakeLlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
     await Future<void>.delayed(errorDelay);
     throw Exception('Simulated stream error after delay');
@@ -58,6 +59,7 @@ class _DelayedChatLlmService extends FakeLlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     chatCalls++;
     await Future<void>.delayed(chatDelay);

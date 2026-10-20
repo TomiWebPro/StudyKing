@@ -30,10 +30,9 @@
 | `get_lesson_history` (review past lessons and mistakes) | YES | `lib/features/mentor/services/tools/get_lesson_history_tool.dart` |
 | `schedule_lesson` (book follow-up on weak areas) | YES | `lib/features/mentor/services/tools/schedule_lesson_tool.dart` |
 | `get_student_stats` (show mastery progress) | YES | `lib/features/mentor/services/tools/get_student_stats_tool.dart` |
-| `review_mistakes` (detailed review of wrong answers) | MISSING | No agent tool wraps practice-session mistake review. |
+| `review_mistakes` (detailed review of wrong answers) | YES | `lib/features/mentor/services/tools/review_mistakes_tool.dart:22` — `ReviewMistakesTool` registered at `lib/core/providers/llm_agent_providers.dart:318`. Returns wrong answers with markscheme explanations and linked concepts, reachable through AgentLoop in `tool_trace_coverage_test.dart`. |
 
-**Gap:** No `review_mistakes` agent tool — the mentor cannot invoke a mistake-review directly.
-→ File `issues/open/e2e-practice-missing-review-mistakes-tool.md`
+**Gap:** All 6 needed tools now exist (`review_mistakes` is registered at `llm_agent_providers.dart:318` and traced in `tool_trace_coverage_test.dart`). No missing-tools issue for this scenario.
 
 ### Context the LLM needs vs. what AgentLoop injects
 
@@ -45,7 +44,7 @@
 | Lesson history (remediation links) | YES | `mentor_context_builder.dart` — `loadUpcomingLessons`; `get_lesson_history_tool.dart` available |
 
 **Gap:** Past session accuracy and readiness scores are not injected into the mentor context prompt.
-→ File `issues/open/scenario-practice-context-not-injected.md`
+→ File `issues/closed/scenario-practice-context-not-injected.md`
 
 ## Comprehension rubric
 
@@ -70,5 +69,7 @@ Traced against code at:
 - Step 4: PASS — `get_weak_topics` + `schedule_lesson` are reachable through AgentLoop.
 - Step 5: PARTIAL — mastery model tracks stats but review UI is sparse.
 
-Tool audit: 5 of 6 needed tools exist; `review_mistakes` is missing.
-Context audit: readiness scores and past session accuracy not injected → new issue filed.
+Tool audit: 6 of 6 needed tools exist; `review_mistakes` is FOUND.
+RESULT: all needed tools available (0 missing).
+Context audit: readiness scores and past session accuracy not injected → issue closed.
+**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `llm_agent_providers.dart:318`, `review_mistakes_tool.dart:22`).

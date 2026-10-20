@@ -66,6 +66,7 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     return Result.success(
       '{"goals":["goal1"],"sections":[{"title":"intro","duration":10,"type":"explanation"}]}',
@@ -82,6 +83,7 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
     yield 'Mock tutor response for: $message';
   }
@@ -127,6 +129,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
   Future<Result<List<MasteryState>>> getWeakTopics(
     String studentId, {
     String? subjectId,
+    String? sessionId,
   }) async =>
       Result.success([]);
 

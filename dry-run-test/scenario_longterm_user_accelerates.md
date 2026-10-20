@@ -13,7 +13,7 @@
 | Step | Expectation | Current code | Status |
 |------|------------|-------------|--------|
 | 1. User says "I want to accelerate to finish Physics in 30 days instead of 90" | The mentor agent should recognize the pacing intent, propose a new plan with shorter duration, and ask for confirmation before changing the plan. No silent deadline moves. | `lib/features/mentor/services/mentor_service.dart:378` — `_extractPlanProposal` parses days from message; `_pendingPlan` is set but confirmation is required via `planDaysMessage`. `PlannerService.updatePlan` uses `addCalendarDays` (calendar-day, not elapsed). | PASS |
-| 2. User says "Actually, I want to study Biology instead of Physics" | The mentor should propose a new subject, preserving mastered topics and carrying forward relevant plan fragments. | `lib/features/planner/services/planner_service.dart:320` — `addSubjectToPlan` exists and merges syllabus goals. No tool wraps this for the agent. | PARTIAL |
+| 2. User says "Actually, I want to study Biology instead of Physics" | The mentor should propose a new subject, preserving mastered topics and carrying forward relevant plan fragments. | `lib/features/planner/services/planner_service.dart:320` — `addSubjectToPlan` exists and merges syllabus goals. `lib/features/mentor/services/tools/add_subject_to_plan_tool.dart` — `AddSubjectToPlanTool` registered at `lib/core/providers/llm_agent_providers.dart:176`, delegates to `PlannerService.addSubjectToPlan`. Traced through `AgentLoop` in `tool_trace_coverage_test.dart`. | PASS |
 | 3. User says "Switch to Ollama instead of OpenRouter" | Settings screen should allow changing provider, base URL, and model. The agent should gracefully degrade if the new provider is unreachable (B4 failover). | `lib/core/services/llm/llm_chat_service.dart:16-29` — `LlmConfiguration` supports backup providers; `lib/core/constants/app_api_config.dart` — env-var overrides exist. Settings UI: `lib/features/settings/`. | PASS |
 | 4. User says "Reschedule my Atoms lesson to 3pm tomorrow" | The mentor extracts the topic from the message, finds the scheduled session, proposes reschedule, and awaits user confirmation before saving. | `lib/features/mentor/services/mentor_service.dart:359` — `_handleRescheduleIntent` extracts topic; `_pendingRescheduleSessionId` is set. `MentorService.suggestReschedule` (`planner_service.dart:603`) performs the reschedule. | PASS |
 | 5. After reschedule, the updated schedule appears in the dashboard | Calendar view and lesson list should reflect the new time immediately. | `lib/features/dashboard/` — dashboard reads from `LessonRepository` and `SessionRepository`. Sessions are saved via `SessionRepository.save`. | PASS |
@@ -46,7 +46,7 @@ Previously filed as `issues/open/e2e-mentor-missing-provider-switch-tool.md` (no
 | Configured provider / model / failover status | NO | No context builder queries LLM configuration. The agent may suggest "try Ollama" without knowing it's already configured as a backup. |
 
 **Gap:** Provider configuration is not injected into the agent context.
-→ File `issues/open/scenario_provider-config-not-injected.md`
+→ File `issues/closed/scenario-provider-config-not-injected.md`
 
 ## Comprehension rubric
 
@@ -64,10 +64,12 @@ Traced against code at `lib/features/mentor/services/mentor_service.dart:337-385
 `lib/features/planner/services/planner_service.dart:603` (`rescheduleLesson`).
 
 - Step 1: PASS — pace acceleration parsed, confirmation enforced.
-- Step 2: PARTIAL — `addSubjectToPlan` exists but no agent tool calls it.
+- Step 2: PASS — `add_subject_to_plan` agent tool is now registered at `llm_agent_providers.dart:176` and delegates to `PlannerService.addSubjectToPlan`.
 - Step 3: PASS — provider config via Settings + B4 failover.
 - Step 4: PASS — reschedule intent extraction + confirmation.
 - Step 5: PASS — session persistence is immediate.
 
 Tool audit: `schedule_lesson`, `modify_plan`, `get_lesson_history`, `switch_provider` all reachable.
-Context audit: provider config not injected → see `scenario_provider-config-not-injected.md`.
+RESULT: all needed tools available (0 missing).
+Context audit: provider config not injected → issue closed (`scenario-provider-config-not-injected.md`).
+**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `llm_agent_providers.dart:176`).

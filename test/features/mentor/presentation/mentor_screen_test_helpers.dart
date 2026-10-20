@@ -146,6 +146,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
     if (shouldThrow) throw Exception('Simulated LLM error');
     if (responseDelay != null) await Future.delayed(responseDelay!);

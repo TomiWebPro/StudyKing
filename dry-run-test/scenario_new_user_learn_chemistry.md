@@ -15,7 +15,7 @@
 | 1. On first launch, does the app explain itself or just show a blank screen? | App should show a welcome / onboarding flow that explains the AI-native tutoring and planning features before showing the main dashboard. | `lib/features/onboarding/` — onboarding exists but may not mention AI mentor or ailab grant. | PARTIAL |
 | 2. Does it nudge me to upload content (PDFs, notes, question banks), or do I have to hunt for the feature? | A first-run coach should ask: "Upload your syllabus, textbook, or notes to get personalised lessons." The upload should be a prominent first action. | `lib/features/ingestion/` — ingestion exists but first-run nudge is not wired. | FAIL |
 | 3. Can I just tell the planner "I want to learn IB Chemistry in 90 days" and have everything generated automatically? | Typing or speaking this utterance should trigger [CreatePlanTool] → PlannerService.generatePlan → plan saved → roadmap created. No manual subject/topic entry required. | `lib/features/mentor/services/tools/create_plan_tool.dart:37` — tool exists; `lib/features/planner/services/planner_service.dart:241` — generatePlan exists. AgentLoop wiring: `lib/core/providers/llm_agent_providers.dart:86` (returns null when apiKey empty). | PARTIAL |
-| 4. Are lesson plans, lesson content, and practice questions auto-generated from the syllabus? | After plan creation, off-period prep should generate lesson blocks and question variants. `GenerateLessonBlocksTool` should be callable from the agent. | `lib/features/mentor/services/tools/generate_lesson_blocks_tool.dart:6` — tool exists but requires a `LessonAgentService` which calls the LLM. In fake-mode tests this is not yet exercised end-to-end. | FAIL |
+| 4. Are lesson plans, lesson content, and practice questions auto-generated from the syllabus? | After plan creation, off-period prep should generate lesson blocks and question variants. `GenerateLessonBlocksTool` should be callable from the agent. | `lib/features/mentor/services/tools/generate_lesson_blocks_tool.dart:6` — tool exists and is registered. `test/integration/agentic_e2e/tool_trace_coverage_test.dart:548` traces `GenerateLessonBlocksTool` end-to-end through `AgentLoop` with a `FakeLessonAgentServicePrep` in fake mode (no real LLM call). `registeredToolNames` count assertion at `tool_trace_coverage_test.dart:2176` confirms 27 tools including `generate_lesson_blocks`. | PASS |
 | 5. Does the system detect missing materials and guide me to fix that? | If no syllabus is uploaded, the agent should ask: "I don't have your IB Chemistry syllabus yet — would you like to upload it or shall I use a standard curriculum?" | `lib/features/mentor/services/mentor_service.dart:146` — `hasMeaningfulData()` detects no subjects but returns a generic "no subjects" message, not a syllabus-guided prompt. | FAIL |
 
 ## Tool/context audit
@@ -47,7 +47,7 @@ missing materials, so it cannot proactively ask the student to upload them.
 | Existing plan / roadmap status | PARTIAL | `lib/features/mentor/services/mentor_context_builder.dart` — loads upcoming lessons and plan context but not ingestion state. |
 
 **Gap:** AgentLoop system prompt does not inject a "missing materials" check.
-→ File `issues/open/scenario_new_user_missing_materials_nudge.md`
+Context audit: missing "uploaded materials" context injection → `issues/closed/scenario-new-user-missing-materials-nudge.md`.
 
 ## Comprehension rubric
 
@@ -67,8 +67,8 @@ Traced against code at `lib/features/onboarding/`, `lib/features/ingestion/`,
 - Step 1: PARTIAL — onboarding exists but does not mention AI mentor or grant model.
 - Step 2: FAIL — no first-run nudge to upload syllabus/textbook.
 - Step 3: PARTIAL — CreatePlanTool is wired but `llmAgentProvider` returns `null` when `apiKey` is empty (line 92), so the agent path is unreachable without API config.
-- Step 4: FAIL — lesson-block generation is not exercised end-to-end in any test.
+- Step 4: PASS — `GenerateLessonBlocksTool` is registered and traced through `AgentLoop` in `tool_trace_coverage_test.dart:548` (fake mode with `FakeLessonAgentServicePrep`).
 - Step 5: FAIL — `hasMeaningfulData()` returns a generic message, not a syllabus-guided prompt.
 
 Tool audit: all 6 mentor tools exist and are registered. No missing-tools issue.
-Context audit: missing "uploaded materials" context injection → new issue filed.
+**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `tool_trace_coverage_test.dart:2171-2176`).

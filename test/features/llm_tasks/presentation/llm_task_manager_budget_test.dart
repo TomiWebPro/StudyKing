@@ -45,6 +45,7 @@ class _FakeTaskManager extends LlmTaskManager {
     required String feature,
     required String modelId,
     String? description,
+    String? sessionId,
     String? taskType,
   }) {
     final id = 'task_${_tasks.length + 1}';

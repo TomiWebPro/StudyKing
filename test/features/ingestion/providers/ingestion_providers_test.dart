@@ -109,6 +109,7 @@ class _FailingLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     return Result.failure('LLM service failure');
   }
@@ -138,6 +139,7 @@ class _ModelCapturingLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     capturedModelIds.add(modelId);
     capturedFeatures.add(feature);

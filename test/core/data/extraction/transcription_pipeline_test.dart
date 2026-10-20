@@ -31,6 +31,7 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     if (_onChat != null) return _onChat();
     return Result.success('transcribed text');
@@ -46,6 +47,7 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
     yield 'stream response';
   }

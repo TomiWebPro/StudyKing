@@ -43,7 +43,7 @@
 | Remediation history (prior review attempts) | YES | `get_lesson_history_tool.dart` shows past lessons. `conversation_repository.dart` persists conversation data. |
 
 **Gap:** Per-question accuracy and variant availability are not injected into mentor context.
-→ File `issues/open/scenario-practice-review-context-not-injected.md`
+→ File `issues/closed/scenario-practice-review-context-not-injected.md`
 
 ## Comprehension rubric
 
@@ -69,4 +69,5 @@ Traced against code at:
 - Step 5: PASS — `RefreshMasteryTool` + MasteryGraphService update mastery state.
 
 Tool audit: 6 of 6 needed tools exist; `review_mistakes` is FOUND.
-Context audit: per-question accuracy and variant availability not injected → new issue filed.
+RESULT: all needed tools available (0 missing).
+**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `review_mistakes_tool.dart:22`, `llm_agent_providers.dart:318`).

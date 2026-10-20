@@ -141,7 +141,7 @@ class FakeLlmUsageMeter extends LlmUsageMeter {
   Future<void> init() async {}
 
   @override
-  List<LlmUsageRecord> getRecords({String? feature, int? limit}) => [];
+  List<LlmUsageRecord> getRecords({String? feature, int? limit, String? sessionId}) => [];
 
   @override
   int getTotalTokens() => _totalTokens;

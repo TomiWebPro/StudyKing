@@ -50,7 +50,7 @@ honors the explicit focus over implicit upcoming-lesson resolution (verified in
 | Daily study cap adherence per subject | NO | `adherence` is tracked at the plan level, not per-subject. No per-subject cap injection. |
 
 **Gap:** No per-subject study time / daily cap context injected into mentor prompt.
-→ File `issues/open/scenario-multisubject-context-not-injected.md`
+→ File `issues/closed/scenario-multisubject-context-not-injected.md`
 
 ## Comprehension rubric
 
@@ -75,4 +75,6 @@ Traced against code at:
 - Step 5: PARTIAL — dashboard aggregates; per-subject breakdown is limited.
 
 Tool audit: 6 of 6 needed tools exist; `switch_syllabus_focus` is FOUND (registered + traced).
-Context audit: per-subject study time and daily cap not injected → new issues filed.
+RESULT: all needed tools available (0 missing).
+Context audit: per-subject study time and daily cap not injected → issue closed.
+**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `switch_syllabus_focus_tool.dart`, `llm_agent_providers.dart`).

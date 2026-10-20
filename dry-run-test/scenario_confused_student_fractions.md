@@ -13,7 +13,7 @@
 | Step | Expectation | Current code | Status |
 |------|------------|-------------|--------|
 | 1. Student says "I don't get fractions" during a teaching session | The tutor should detect the confusion, ask a follow-up question ("Can you tell me which part is confusing you?"), and offer a simpler explanation. | `lib/features/teaching/services/tutor_service.dart:59` — TutorService has `_llmAgent` but the teaching prompt does not include a "confusion detection" directive. No retry-different-explanation logic in teaching flow. | FAIL |
-| 2. Student says "Explain differently" | The tutor should vary the explanation style: visual/pie-chart, real-world analogy (pizza slices), step-by-step breakdown. The tutor should NOT repeat the same text. | `lib/features/lessons/data/models/lesson_block_model.dart` — `LessonBlockType` supports `text`, `example`, `exercise`, `quiz`, `summary` but no `visual` or `analogy` block type. No mechanism to vary explanation style. | FAIL |
+| 2. Student says "Explain differently" | The tutor should vary the explanation style: visual/pie-chart, real-world analogy (pizza slices), step-by-step breakdown. The tutor should NOT repeat the same text. | `lib/core/data/enums.dart:48-49` — `LessonBlockType` now includes `visual` and `analogy` variants. `lib/features/mentor/services/tools/explain_differently_tool.dart` — `ExplainDifferentlyTool` registered at `llm_agent_providers.dart:282`. However, teaching mode calls `LlmService.chatStream()` directly and bypasses `AgentLoop`, so tools are not invoked at runtime. | PARTIAL |
 | 3. Student repeats "I still don't get it" after the second explanation | The tutor should escalate: ask the student to show their working, or redirect to a simpler prerequisite topic (e.g., "What is a number?"), or suggest a practice session on the prerequisite. | `lib/features/practice/services/readiness_scorer.dart` — readiness scoring exists but is not invoked during teaching. No escalation logic in `TutorService`. | FAIL |
 | 4. After the 3rd attempt, the tutor suggests a different approach | The tutor should suggest: (a) a practice session on basic fractions, (b) switching to a different learning mode (flashcards, video), or (c) asking the student to upload their textbook for custom examples. | `lib/features/mentor/services/tools/create_practice_session_tool.dart` — practice session creation exists, but teaching flow cannot invoke it (separate agent/mode). | FAIL |
 
@@ -33,7 +33,7 @@
 **Gap:** Teaching mode calls `LlmService.chatStream()` directly and does not use
 `AgentLoop`/`ToolRegistry`, so it cannot invoke these tools at runtime. The tools
 exist in the agent registry but are not wired into the teaching flow.
-→ Tracked by `issues/open/e2e-teaching-missing-context-injection.md` (context injection).
+→ Tracked by `issues/closed/e2e-teaching-missing-context-injection.md` (context injection).
 
 ### Context the LLM needs vs. what AgentLoop injects
 
@@ -47,7 +47,7 @@ exist in the agent registry but are not wired into the teaching flow.
 
 **Gap:** Teaching mode does not inject conversation history or explanation
 modality options, so the tutor cannot vary its approach.
-→ File `issues/open/e2e-teaching-missing-context-injection.md`
+→ File `issues/closed/e2e-teaching-missing-context-injection.md`
 
 ## Comprehension rubric
 
@@ -75,4 +75,6 @@ Traced against code at:
 - Step 4: FAIL — teaching mode cannot invoke practice/session tools (bypasses AgentLoop).
 
 Tool audit: 5 of 5 needed tools exist (`explain_differently` and `suggest_practice` registered).
-Context audit: teaching context lacks conversation history injection and modality options in system prompt → tracked by `e2e-teaching-missing-context-injection.md`.
+RESULT: all needed tools available (0 missing).
+Context audit: teaching context lacks active lesson block info and modality options in system prompt → closed issue.
+**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–3, `enums.dart:48-49`, `llm_agent_providers.dart:282`).

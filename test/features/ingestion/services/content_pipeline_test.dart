@@ -53,6 +53,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     return Result.success(response);
   }
@@ -74,6 +75,7 @@ class ModelCapturingLlmService extends FakeLlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     capturedModelIds.add(modelId);
     capturedFeatures.add(feature);
@@ -104,6 +106,7 @@ class FakeOcrExtractor extends OcrExtractor {
   Future<OcrExtractionResult> extractText({
     required String rawContent,
     required String? sourceUrl,
+    String? sessionId,
   }) async =>
       const OcrExtractionResult(text: '', extractionMethod: 'x');
 }

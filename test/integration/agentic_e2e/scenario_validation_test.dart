@@ -1726,6 +1726,135 @@ void main() {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // CI lint: validates dry-run-test .md verdicts against current code.
+  // Per vision §3.1 (validator loop): "a scheduled agent re-traces scenarios
+  // against current code". This enforces that for the documentation layer.
+  // ---------------------------------------------------------------------------
+  group('Scenario .md verdict lint against current code', () {
+    /// All 11 dry-run-test scenario files (Vision Next-Term §3.2).
+    final scenarios = <String>[
+      'scenario_new_user_learn_chemistry',
+      'scenario_api_key_missing',
+      'scenario_longterm_user_accelerates',
+      'scenario_confused_student_fractions',
+      'scenario_overworked_student',
+      'scenario_practice_review_adaptive',
+      'scenario_ingestion_pdf_to_knowledge_base',
+      'scenario_teacher_feedback_loop',
+      'scenario_multisubject_juggling',
+      'scenario_offline_low_end_device_stress',
+      'scenario_practice_mistake_review',
+    ];
+
+    /// Parses tool-audit table rows from a scenario .md file.
+    ///
+    /// Each row has the form:
+    ///   `| `tool_name` (description) | STATUS | file:line — ... |`
+    ///
+    /// Returns a list of [ToolAuditEntry] pairs (toolName, status).
+    List<_ToolAuditEntry> parseToolAudit(String content) {
+      final rows = <_ToolAuditEntry>[];
+      final pattern = RegExp(
+        r'\|\s*`(\w+)`\s*\([^)]*\)\s*\|\s*(\w+)',
+      );
+      for (final m in pattern.allMatches(content)) {
+        rows.add(_ToolAuditEntry(
+          toolName: m.group(1)!,
+          status: m.group(2)!,
+        ));
+      }
+      return rows;
+    }
+
+    test('no scenario .md marks a registered tool as MISSING', () {
+      // Flags any .md that asserts a tool is MISSING when it is actually
+      // registered in llmAgentToolsProvider (via registeredToolNames).
+      final violations = <String>[];
+
+      for (final name in scenarios) {
+        final file = File('dry-run-test/$name.md');
+        expect(file.existsSync(), isTrue,
+            reason: 'Scenario file missing: dry-run-test/$name.md');
+        final content = file.readAsStringSync();
+        final entries = parseToolAudit(content);
+
+        for (final entry in entries) {
+          if (entry.status == 'MISSING') {
+            final isRegistered = registeredToolNames.contains(entry.toolName);
+            if (isRegistered) {
+              violations.add(
+                '$name.md: tool `${entry.toolName}` marked MISSING but is '
+                'registered in llmAgentToolsProvider',
+              );
+            }
+          }
+        }
+      }
+
+      expect(violations, isEmpty,
+          reason: violations.join('\n'));
+    });
+
+    test('no scenario .md marks an unregistered tool as YES', () {
+      // Flags any .md that asserts a tool is YES when it is NOT registered
+      // in llmAgentToolsProvider (via registeredToolNames).
+      final violations = <String>[];
+
+      for (final name in scenarios) {
+        final file = File('dry-run-test/$name.md');
+        final content = file.readAsStringSync();
+        final entries = parseToolAudit(content);
+
+        for (final entry in entries) {
+          if (entry.status == 'YES' || entry.status == 'HAD') {
+            final isRegistered = registeredToolNames.contains(entry.toolName);
+            if (!isRegistered) {
+              violations.add(
+                '$name.md: tool `${entry.toolName}` marked ${entry.status} but '
+                'is NOT in registeredToolNames',
+              );
+            }
+          }
+        }
+      }
+
+      expect(violations, isEmpty,
+          reason: violations.join('\n'));
+    });
+
+    test('every scenario .md has a Last re-traced timestamp', () {
+      // Per solidification criterion #3: each scenario .md's Validation
+      // Results section must include a "Last re-traced" timestamp and git
+      // commit hash so drift is visible at a glance.
+      for (final name in scenarios) {
+        final file = File('dry-run-test/$name.md');
+        final content = file.readAsStringSync();
+        expect(content.contains('Last re-traced'), isTrue,
+            reason: '$name.md is missing a "Last re-traced" timestamp. '
+                'Add "**Last re-traced:** YYYY-MM-DD against commit `<hash>`" '
+                'to the end of the file.');
+      }
+    });
+
+    test('every scenario .md tool audit has a Result line', () {
+      // Every scenario .md's tool-audit section must end with a RESULT line
+      // (matching the format in fakes.dart AgentRunCapture.auditTools).
+      for (final name in scenarios) {
+        final file = File('dry-run-test/$name.md');
+        final content = file.readAsStringSync();
+        // Check either a RESULT line exists or "no missing tools" is stated.
+        expect(
+          content.contains('RESULT:') ||
+              content.contains('all needed tools available') ||
+              content.contains('No missing-tools issue'),
+          isTrue,
+          reason: '$name.md tool audit is missing a RESULT summary line.',
+        );
+      }
+    });
+  });
+
   group('Scenario coverage completeness', () {
     test('all 11 dry-run-test scenarios have a validation trace', () {
       // Per vision §3.2 acceptance: every scenario must be re-traced against
@@ -1769,4 +1898,11 @@ void main() {
       expect(registeredToolNames.length, registeredToolNames.toSet().length);
     });
   });
+}
+
+/// Simple data class for parsed tool-audit table rows from scenario .md files.
+class _ToolAuditEntry {
+  final String toolName;
+  final String status;
+  _ToolAuditEntry({required this.toolName, required this.status});
 }

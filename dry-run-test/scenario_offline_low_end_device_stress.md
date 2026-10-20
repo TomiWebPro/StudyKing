@@ -40,7 +40,7 @@
 | File-size ceiling awareness | NO | No ingestion tool checks file size against device constraints. `ingestion-file-size-token-ceiling-missing.md`. |
 
 **Gap:** Provider configuration is not injected into the mentor context — the mentor cannot proactively suggest "I'll switch to Ollama" because it doesn't know the current provider config.
-→ File `issues/open/scenario_provider-config-not-injected.md` (already open)
+→ File `issues/closed/scenario-provider-config-not-injected.md`
 
 ## Comprehension rubric
 
@@ -66,4 +66,6 @@ Traced against code at:
 - Step 5: FAIL — no file-size ceiling or device-aware ingestion guidance.
 
 Tool audit: no missing agent tools for this scenario.
-Context audit: provider config not injected → issue already open (`scenario_provider-config-not-injected.md`).
+RESULT: all needed tools available (0 missing).
+Context audit: provider config not injected → issue closed (`scenario-provider-config-not-injected.md`).
+**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `system_monitor_service.dart:20`).

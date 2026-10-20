@@ -114,6 +114,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
     capturedMessage = message;
     capturedSystemPrompt = systemPrompt;
@@ -239,6 +240,7 @@ class FakePlannerService extends PlannerService {
     required DateTime startTime,
     required int durationMinutes,
     String? excludeSessionId,
+    String? sessionId,
   }) async => Result.success(_hasConflict);
 
   @override
@@ -481,6 +483,7 @@ class _FakeStreamingAgent extends LlmAgent {
     String feature = 'agent',
     List<Map<String, String>>? history,
     Future<void> Function(AgentToolCall call)? onToolCall,
+    String? sessionId,
   }) async* {
     chatStreamCallCount++;
     capturedMessages.add(message);

@@ -27,6 +27,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     return Result.success(response);
   }
@@ -421,6 +422,7 @@ class _FailingLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     chatCalled = true;
     return Result.failure('llm down');
@@ -451,6 +453,7 @@ class _RetryingLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     chatCallCount++;
     if (chatCallCount <= failuresBeforeSuccess) {

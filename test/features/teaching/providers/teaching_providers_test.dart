@@ -51,6 +51,7 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     if (shouldThrow) return Result.failure('Simulated LLM error');
     return Result.success('{"score": 0.8, "explanation": "Good job"}');
