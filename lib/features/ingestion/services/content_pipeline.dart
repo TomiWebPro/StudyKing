@@ -800,6 +800,7 @@ class ContentPipeline {
         modelId: classificationModelId,
         systemPrompt: l10n.classifySystemPrompt,
         feature: _feature,
+        taskType: _feature,
       );
       if (result.isFailure) return '';
       final response = result.data!;
@@ -869,6 +870,7 @@ class ContentPipeline {
         modelId: classificationModelId,
         systemPrompt: 'You are a syllabus parser. Extract topic names as a JSON array of strings.',
         feature: _feature,
+        taskType: _feature,
       );
       if (result.isFailure) return [];
 
@@ -945,6 +947,7 @@ class ContentPipeline {
         modelId: summarizationModelId,
         systemPrompt: l10n.summarizeSystemPrompt,
         feature: _feature,
+        taskType: _feature,
       );
       if (result.isFailure) return '';
       final response = result.data!;
@@ -996,6 +999,7 @@ class ContentPipeline {
         modelId: generationModelId,
         systemPrompt: l10n.generateQuestionSystemPrompt,
         feature: _feature,
+        taskType: _feature,
       );
       if (result.isFailure) return [];
       final response = result.data!;

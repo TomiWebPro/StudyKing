@@ -281,11 +281,22 @@ class IdleExecutor {
       // per-task token spend instead of 0 (vision §4.2 token transparency).
       var totalTokens = 0;
       var totalCost = 0.0;
+      // Track whether any per-call LlmTask already recorded on the meter under
+      // a PrepCategory key. If so, those tokens are already attributed on the
+      // meter and the aggregate bridge must NOT re-record them — that would
+      // double-count the same physical tokens on the shared LlmUsageMeter,
+      // inflating totalPrepTokens() and burning per-category caps at 2× the
+      // real rate (Issue: idle-executor-aggregate-double-counts-meter).
+      var perCallHasPrepCategory = false;
       if (manager != null) {
         for (final t in manager.tasks) {
           if (preRunTaskIds.contains(t.id) || t.id == taskId) continue;
           totalTokens += t.tokensUsed;
           totalCost += t.estimatedCost;
+          if (t.taskType != null &&
+              PrepCategory.values.any((c) => c.taskTypeKey == t.taskType)) {
+            perCallHasPrepCategory = true;
+          }
         }
       }
       if (taskId.isNotEmpty) {
@@ -296,12 +307,17 @@ class IdleExecutor {
         );
         // Bridge the parent task's feature/taskType onto the LlmUsageMeter so
         // PrepBudgetService can attribute the spend under the correct prep
-        // category (Vision Next-Term §4.2). Individual LLM calls inside the
-        // task already record on the meter under sub-feature task types
-        // (e.g. 'classification'); this aggregate record makes the parent's
-        // taskType (e.g. 'pdf_ingestion') visible to spendingByCategory().
-        // Only recorded when tokens were actually consumed.
-        if (_usageMeter != null && totalTokens > 0) {
+        // category (Vision Next-Term §4.2). This is ONLY needed when per-call
+        // recordings did NOT already cover the tokens under a PrepCategory key
+        // — e.g. pipeline internal calls using non-prep features that resolve
+        // to classification/generation/summarization. When per-call recordings
+        // already used a PrepCategory key (e.g. 'pdf_ingestion' via the
+        // taskType override in chat()), re-recording would double-count the
+        // same physical tokens. Only recorded when tokens were actually
+        // consumed AND the aggregate is not redundant.
+        if (_usageMeter != null &&
+            totalTokens > 0 &&
+            !perCallHasPrepCategory) {
           final inputTokens = totalTokens ~/ 2;
           _usageMeter.recordUsage(
             id: '${taskId}_aggregate_${DateTime.now().millisecondsSinceEpoch}',

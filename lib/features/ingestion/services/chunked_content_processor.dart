@@ -320,6 +320,7 @@ class ChunkedContentProcessor {
           modelId: modelId,
           systemPrompt: l10n.summarizeSystemPrompt,
           feature: _feature,
+          taskType: _feature,
         );
         if (result.isFailure) {
           _logger.w('Summary consolidation failed: ${result.error}');
@@ -486,6 +487,7 @@ class ChunkedContentProcessor {
         modelId: modelId,
         systemPrompt: systemPrompt,
         feature: feature,
+        taskType: feature,
       );
 
       if (result.isSuccess || attempt >= _maxRetryAttempts || _cancelled) {

@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
@@ -1034,12 +1033,11 @@ void main() {
     //    pipeline LlmUsageMeter records shows nonzero pdf_ingestion spend
     //    after the fix."
     //
-    // Verifies the two-bucket design: individual pipeline LLM calls record
-    // under 'background' (via fromFeature('pdf_ingestion') → background),
-    // while the IdleExecutor aggregate bridge records the parent task's
-    // feature/taskType ('pdf_ingestion') on the meter — so
-    // spendingByCategory()['pdf_ingestion'] is nonzero and no tokens leak
-    // into live buckets (classification/generation/summarization).
+    // After the double-counting fix, when ContentPipeline passes
+    // `taskType: 'pdf_ingestion'` to chat() (as it now does), per-call
+    // recordings land under 'pdf_ingestion' — a PrepCategory key — and the
+    // aggregate bridge is skipped (no double-count). spendingByCategory()
+    // reads 'pdf_ingestion' directly from per-call recordings.
 
     test('spendingByCategory[pdf_ingestion] is nonzero after a pipeline-style prep run',
         () async {
@@ -1062,14 +1060,13 @@ void main() {
       await executor.enqueuePrepTool(
         'pdf ingestion pipeline',
         () async {
-          // Simulate ContentPipeline making LLM calls with feature: 'pdf_ingestion'.
-          // In production, LlmService.chat creates an LlmTask on the manager and
-          // _recordCompletion calls meter.recordUsage with taskType from
-          // LlmTaskType.fromFeature('pdf_ingestion') → background.
+          // Simulate ContentPipeline making LLM calls with feature: 'pdf_ingestion'
+          // and taskType: 'pdf_ingestion' (passed via the taskType override in
+          // chat(), as ContentPipeline now does after the attribution fix).
           final callId = manager.createTask(
             feature: 'pdf_ingestion',
             modelId: 'gpt-4o-mini',
-            taskType: LlmTaskType.fromFeature('pdf_ingestion')?.name,
+            taskType: 'pdf_ingestion',
           );
           manager.startTask(callId);
           manager.completeTask(
@@ -1078,15 +1075,14 @@ void main() {
             estimatedCost: 0.001,
           );
 
-          // Simulate _recordCompletion recording on the meter.
-          // fromFeature('pdf_ingestion') → background, so taskType is 'background'.
+          // Simulate _recordCompletion recording on the meter under 'pdf_ingestion'.
           meter.recordUsage(
             id: callId,
             feature: 'pdf_ingestion',
             modelId: 'gpt-4o-mini',
             inputTokens: 1000,
             outputTokens: 500,
-            taskType: LlmTaskType.fromFeature('pdf_ingestion')?.name,
+            taskType: 'pdf_ingestion',
           );
           return {'success': true};
         },
@@ -1097,25 +1093,22 @@ void main() {
         estimatedOutputTokens: 300,
       );
 
+      // Let the _tryExecuteNext aggregate-bridge code actually run so we
+      // verify it is SKIPPED (not just absent from the meter).
+      await Future.delayed(Duration.zero);
+      await Future.delayed(Duration.zero);
+      await Future.delayed(Duration.zero);
+
       // Criterion 3: spendingByCategory must show nonzero for pdf_ingestion.
-      final spending = budget.spendingByCategory();
-      expect(
-        spending[PrepCategory.pdfIngestion],
-        greaterThan(0),
-        reason: 'Aggregate bridge must attribute tokens to pdf_ingestion',
-      );
-
-      // The aggregate-bridge record carries taskType 'pdf_ingestion'.
+      // With per-call taskType='pdf_ingestion', the aggregate bridge is skipped
+      // (per-call already covers the PrepCategory key), so tokens are recorded
+      // exactly once — under 'pdf_ingestion' — not double-counted.
       final byType = meter.getTotalTokensPerTaskType();
-      expect(
-        byType['pdf_ingestion'],
-        greaterThan(0),
-        reason: 'Meter must record an aggregate under pdf_ingestion',
-      );
+      expect(byType['pdf_ingestion'], equals(1500));
+      expect(byType['background'], isNull);
 
-      // Individuals record under 'background' (fromFeature('pdf_ingestion')
-      // → background), NOT under classification/generation/summarization.
-      expect(byType['background'], greaterThan(0));
+      final spending = budget.spendingByCategory();
+      expect(spending[PrepCategory.pdfIngestion], equals(1500));
 
       // No live misclassification: pipeline tokens must never land in
       // classification/generation/summarization buckets.
@@ -1125,6 +1118,9 @@ void main() {
 
       // All recorded tokens are prep → totalLiveTokens is zero.
       expect(budget.totalLiveTokens(), equals(0));
+
+      // No double-count: totalPrepTokens equals the single call's actual spend.
+      expect(budget.totalPrepTokens(), equals(1500));
 
       executor.dispose();
     });
@@ -1179,7 +1175,7 @@ void main() {
       executor.dispose();
     });
 
-    test('pipeline tokens split across pdf_ingestion aggregate and background individuals',
+    test('pipeline with per-call pdf_ingestion taskType records tokens exactly once (no double-count)',
         () async {
       final meter = LlmUsageMeter();
       final manager = LlmTaskManager();
@@ -1197,13 +1193,14 @@ void main() {
       await executor.enqueuePrepTool(
         'multi-call pipeline',
         () async {
-          // Simulate 3 pipeline LLM calls, each creating a task and recording
-          // on the meter under feature 'pdf_ingestion' → background.
+          // Simulate 3 pipeline LLM calls, each recording on the meter
+          // under taskType 'pdf_ingestion' (a PrepCategory key), exactly
+          // as ContentPipeline now does after passing taskType: _feature.
           for (var i = 0; i < 3; i++) {
             final callId = manager.createTask(
               feature: 'pdf_ingestion',
               modelId: 'gpt-4o-mini',
-              taskType: LlmTaskType.fromFeature('pdf_ingestion')?.name,
+              taskType: 'pdf_ingestion',
             );
             manager.startTask(callId);
             manager.completeTask(
@@ -1217,7 +1214,7 @@ void main() {
               modelId: 'gpt-4o-mini',
               inputTokens: 200,
               outputTokens: 200,
-              taskType: LlmTaskType.fromFeature('pdf_ingestion')?.name,
+              taskType: 'pdf_ingestion',
             );
           }
           return {'success': true};
@@ -1229,23 +1226,101 @@ void main() {
         estimatedOutputTokens: 300,
       );
 
+      // Drain the microtask queue so the _tryExecuteNext aggregate-bridge
+      // code has actually fired (proving the skip, not mere absence).
+      await Future.delayed(Duration.zero);
+      await Future.delayed(Duration.zero);
+      await Future.delayed(Duration.zero);
+
       final byType = meter.getTotalTokensPerTaskType();
 
-      // Individuals: 3 × 400 tokens under 'background'
-      expect(byType['background'], equals(1200));
-
-      // Aggregate bridge: totalTokens (1200) split input/output under 'pdf_ingestion'
+      // Per-call recordings under 'pdf_ingestion' (a PrepCategory key)
+      // cause the aggregate bridge to be SKIPPED — no double-count.
+      // All 3 × 400 = 1200 tokens live in the single 'pdf_ingestion' bucket.
       expect(byType['pdf_ingestion'], equals(1200));
+      // No spurious 'background' bucket from the old fromFeature() mapping.
+      expect(byType['background'], isNull);
 
       final spending = budget.spendingByCategory();
       expect(spending[PrepCategory.pdfIngestion], equals(1200));
-      expect(spending[PrepCategory.background], equals(1200));
 
-      // Double-count is the intended two-bucket design (§4.2/§4.4):
-      // individuals live under 'background' so totalPrepTokens and
-      // totalLiveTokens partition correctly.
-      expect(budget.totalPrepTokens(), greaterThan(0));
+      // Single physical pipeline → tokens appear on the meter exactly once.
+      expect(budget.totalPrepTokens(), equals(1200));
       expect(budget.totalLiveTokens(), equals(0));
+
+      executor.dispose();
+    });
+
+    test('aggregate bridge records parent category when per-call uses non-prep taskType',
+        () async {
+      final meter = LlmUsageMeter();
+      final manager = LlmTaskManager();
+      final budget = PrepBudgetService(
+        meter: meter,
+        budget: PrepBudget.defaults,
+      );
+
+      final executor = IdleExecutor(
+        llmTaskManager: manager,
+        usageMeter: meter,
+        prepBudgetService: budget,
+      );
+
+      await executor.enqueuePrepTool(
+        'classification pipeline (non-prep taskType)',
+        () async {
+          // Simulate 3 pipeline LLM calls whose per-call taskType is
+          // 'classification' (NOT a PrepCategory key). This covers the
+          // fallback path: the aggregate bridge MUST still fire to attribute
+          // tokens to the parent category 'pdf_ingestion'.
+          for (var i = 0; i < 3; i++) {
+            final callId = manager.createTask(
+              feature: 'pdf_ingestion',
+              modelId: 'gpt-4o-mini',
+              taskType: 'classification',
+            );
+            manager.startTask(callId);
+            manager.completeTask(
+              callId,
+              tokensUsed: 400,
+              estimatedCost: 0.0005,
+            );
+            meter.recordUsage(
+              id: callId,
+              feature: 'pdf_ingestion',
+              modelId: 'gpt-4o-mini',
+              inputTokens: 200,
+              outputTokens: 200,
+              taskType: 'classification',
+            );
+          }
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        estimatedInputTokens: 500,
+        estimatedOutputTokens: 300,
+      );
+
+      // Drain the microtask queue so the _tryExecuteNext aggregate-bridge
+      // code has actually fired.
+      await Future.delayed(Duration.zero);
+      await Future.delayed(Duration.zero);
+      await Future.delayed(Duration.zero);
+
+      final byType = meter.getTotalTokensPerTaskType();
+
+      // Per-call recordings landed under 'classification' (not a PrepCategory
+      // key), so the aggregate bridge fires and records the parent category
+      // 'pdf_ingestion' with the total tokens.
+      expect(byType['classification'], equals(1200));
+      expect(byType['pdf_ingestion'], equals(1200));
+
+      // Prep tokens come only from the 'pdf_ingestion' bucket (aggregate).
+      expect(budget.totalPrepTokens(), equals(1200));
+      // Classification tokens are live (non-prep).
+      expect(budget.totalLiveTokens(), equals(1200));
 
       executor.dispose();
     });
