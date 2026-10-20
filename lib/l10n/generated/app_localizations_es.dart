@@ -4813,6 +4813,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get taskTypeFilterLabel => 'Filtro';
 
   @override
+  String get sessionFilterLabel => 'Sesión';
+
+  @override
+  String get allSessions => 'Todas las sesiones';
+
+  @override
   String get allSources => 'Todas las fuentes';
 
   @override

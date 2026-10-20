@@ -7914,6 +7914,18 @@ abstract class AppLocalizations {
   /// **'Filter'**
   String get taskTypeFilterLabel;
 
+  /// Label for the session filter dropdown in the LLM task manager
+  ///
+  /// In en, this message translates to:
+  /// **'Session'**
+  String get sessionFilterLabel;
+
+  /// Filter label showing all sessions
+  ///
+  /// In en, this message translates to:
+  /// **'All sessions'**
+  String get allSessions;
+
   /// Filter label showing all sources
   ///
   /// In en, this message translates to:

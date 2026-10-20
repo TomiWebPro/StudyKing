@@ -35,6 +35,14 @@ import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_too
 import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/core/services/llm_agent/agent_loop.dart';
+import 'package:studyking/core/services/llm_agent/agent_memory.dart';
+import 'package:studyking/core/services/llm_agent/agent_tool.dart';
+import 'package:studyking/core/services/llm_agent/idle_executor.dart';
+import 'package:studyking/core/services/llm_agent/llm_agent.dart';
+import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/core/services/prep_budget.dart' show PrepCategory;
+import 'package:studyking/core/services/system_monitor_service.dart';
 
 final _logger = Logger('TutorServiceTest');
 
@@ -113,6 +121,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     chatCalls++;
     if (_shouldThrowOnChat) throw Exception('LLM failure');
@@ -129,6 +138,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
     yield 'Tutor response';
   }
@@ -503,6 +513,155 @@ class FakePreGenerateLessonTool extends PreGenerateLessonTool {
       'blockCount': lesson.blocks.length,
       'title': lesson.title,
     };
+  }
+}
+
+/// Captures a single `enqueuePrepTool` invocation so tests can assert on the
+/// exact `feature`/`taskType`/`subjectId` attribution that TutorService hands
+/// to the IdleExecutor.
+class PrepTaskCapture {
+  final String description;
+  final bool requiresHeavy;
+  final String feature;
+  final String taskType;
+  final String? subjectId;
+  final int estimatedInputTokens;
+  final int estimatedOutputTokens;
+
+  PrepTaskCapture({
+    required this.description,
+    required this.requiresHeavy,
+    required this.feature,
+    required this.taskType,
+    this.subjectId,
+    this.estimatedInputTokens = 0,
+    this.estimatedOutputTokens = 0,
+  });
+}
+
+/// Hand-written fake [IdleExecutor] that records every `enqueuePrepTool` and
+/// `enqueue` call in a list (mirroring [FakeIdleExecutor] from
+/// `llm_agent_test.dart`) without executing any tasks. This lets TutorService
+/// tests prove that `endLesson` → `_enqueueBackgroundTasks` → `LlmAgent.enqueuePrepTask`
+/// lands three correctly-attributed prep tasks on the executor.
+class CapturingIdleExecutor extends IdleExecutor {
+  final List<PrepTaskCapture> capturedPrepTasks = [];
+  final List<String> capturedEnqueuedDescriptions = [];
+  bool disposed = false;
+
+  @override
+  Future<void> enqueuePrepTool(
+    String description,
+    Future<Map<String, dynamic>> Function() task, {
+    required bool requiresHeavy,
+    required String feature,
+    required String taskType,
+    String? subjectId,
+    int estimatedInputTokens = 0,
+    int estimatedOutputTokens = 0,
+  }) async {
+    capturedPrepTasks.add(PrepTaskCapture(
+      description: description,
+      requiresHeavy: requiresHeavy,
+      feature: feature,
+      taskType: taskType,
+      subjectId: subjectId,
+      estimatedInputTokens: estimatedInputTokens,
+      estimatedOutputTokens: estimatedOutputTokens,
+    ));
+  }
+
+  @override
+  Future<void> enqueue(
+    String description,
+    Future<void> Function() task, {
+    bool requiresHeavy = false,
+  }) async {
+    capturedEnqueuedDescriptions.add(description);
+  }
+
+  @override
+  void dispose() {
+    disposed = true;
+  }
+}
+
+/// Hand-written fake [SystemMonitorService] with a mutable
+/// `canRunHeavyPrepNow` flag, copied from `idle_executor_test.dart` so that
+/// TutorService deferral tests can toggle CPU pressure at runtime.
+class MutableFakeSystemMonitorService extends SystemMonitorService {
+  bool canRunHeavyPrepNowValue;
+  final int batteryLevelValue;
+  final bool isChargingValue;
+  final double cpuLoadValue;
+  final bool isBatterySaverValue;
+  final String? networkTypeValue;
+
+  MutableFakeSystemMonitorService({
+    this.canRunHeavyPrepNowValue = true,
+    this.batteryLevelValue = -1,
+    this.isChargingValue = false,
+    this.cpuLoadValue = -1,
+    this.isBatterySaverValue = false,
+    this.networkTypeValue,
+  });
+
+  set canRunHeavyPrepNow(bool value) => canRunHeavyPrepNowValue = value;
+
+  @override
+  bool get canRunHeavyPrepNow => canRunHeavyPrepNowValue;
+
+  @override
+  int get batteryLevel => batteryLevelValue;
+
+  @override
+  bool get isCharging => isChargingValue;
+
+  @override
+  double get cpuLoad => cpuLoadValue;
+
+  @override
+  bool get isBatterySaver => isBatterySaverValue;
+
+  @override
+  String? get networkType => networkTypeValue;
+}
+
+/// Minimal [AgentLoop] stub that returns a canned [AgentResponse] without any
+/// LLM calls — only needed here to satisfy [LlmAgent]'s constructor in
+/// endLesson tests (the loop is never invoked; only `enqueuePrepTask` is).
+class FakeAgentLoop extends AgentLoop {
+  FakeAgentLoop()
+      : super(
+          llmService: FakeLlmService(),
+          modelId: 'test-model',
+          toolRegistry: ToolRegistry(),
+        );
+
+  @override
+  Future<AgentResponse> run({
+    required String userMessage,
+    required String studentId,
+    required String systemPrompt,
+    String feature = 'agent',
+    List<Map<String, String>>? history,
+    String? sessionId,
+  }) async {
+    return AgentResponse(content: 'AI response', toolCalls: []);
+  }
+}
+
+/// In-memory [AgentMemoryStore] for [LlmAgent] construction — mirrors
+/// `FakeAgentMemoryStore` from `llm_agent_test.dart`.
+class FakeAgentMemoryStore extends AgentMemoryStore {
+  final Map<String, String> _facts = {};
+
+  @override
+  String? recallFact(String studentId, String key) => _facts['${studentId}_$key'];
+
+  @override
+  Future<void> rememberFact(String studentId, String key, String value) async {
+    _facts['${studentId}_$key'] = value;
   }
 }
 
@@ -1270,6 +1429,211 @@ void main() {
         // answers recorded), not the default 0 — matching the practice path.
         expect(fakePlan.lastActualQuestions, equals(3));
         expect(fakePlan.lastActualMinutes, greaterThan(0));
+      });
+
+      // ─────────────────────────────────────────────────────────────
+      // Post-lesson off-period prep deferral (Vision Next-Term §4.1/§4.3).
+      // These tests prove that ending a tutoring lesson enqueues three
+      // heavy prep tasks onto the IdleExecutor via LlmAgent.enqueuePrepTask,
+      // and that the CPU-pressure gate defers them until the device is idle.
+      // ─────────────────────────────────────────────────────────────
+
+      test(
+          'endLesson enqueues three prep tasks to IdleExecutor with '
+          'correct feature/taskType/subjectId', () async {
+        // LlmAgent backed by a capturing executor that records every
+        // enqueuePrepTool call instead of executing.
+        final capturingExecutor = CapturingIdleExecutor();
+        final llmAgent = LlmAgent(
+          loop: FakeAgentLoop(),
+          toolRegistry: ToolRegistry(),
+          memoryStore: FakeAgentMemoryStore(),
+          idleExecutor: capturingExecutor,
+          studentId: 'student-1',
+        );
+
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+          llmAgent: llmAgent,
+        );
+
+        final manager = await service.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          localeName: 'en',
+        );
+        await manager.sendMessage('Hello').toList();
+        await service.endLesson();
+
+        // _enqueueBackgroundTasks must land exactly three prep tasks.
+        expect(capturingExecutor.capturedPrepTasks.length, equals(3));
+
+        // Task 1 — post-lesson adherence check → background bucket.
+        final adherenceTask = capturingExecutor.capturedPrepTasks[0];
+        expect(
+          adherenceTask.description,
+          equals('Post-lesson adherence update'),
+        );
+        expect(
+          adherenceTask.taskType,
+          equals(PrepCategory.background.taskTypeKey),
+          reason: 'adherence check must be attributed to the background bucket',
+        );
+        expect(
+          adherenceTask.feature,
+          equals(PrepCategory.background.taskTypeKey),
+        );
+        expect(adherenceTask.requiresHeavy, isTrue);
+        expect(adherenceTask.subjectId, isNull);
+
+        // Task 2 — weak-topic reanalysis → background bucket.
+        final weakTopicTask = capturingExecutor.capturedPrepTasks[1];
+        expect(
+          weakTopicTask.description,
+          equals('Post-lesson weak topic reanalysis'),
+        );
+        expect(
+          weakTopicTask.taskType,
+          equals(PrepCategory.background.taskTypeKey),
+          reason: 'weak-topic reanalysis must be attributed to background',
+        );
+        expect(
+          weakTopicTask.feature,
+          equals(PrepCategory.background.taskTypeKey),
+        );
+        expect(weakTopicTask.requiresHeavy, isTrue);
+        expect(weakTopicTask.subjectId, isNull);
+
+        // Task 3 — next-topic lesson prep → lesson_prep bucket, bound to
+        // the lesson's subject so the IdleExecutor can skip it when the
+        // student paused that syllabus (Vision §4.2 per-subject opt-in).
+        final nextTopicTask = capturingExecutor.capturedPrepTasks[2];
+        expect(
+          nextTopicTask.description,
+          equals('Next topic lesson prep'),
+        );
+        expect(
+          nextTopicTask.taskType,
+          equals(PrepCategory.lessonPrep.taskTypeKey),
+          reason: 'next-topic prep must be attributed to lesson_prep, '
+              'not the generic background bucket',
+        );
+        expect(
+          nextTopicTask.feature,
+          equals(PrepCategory.lessonPrep.taskTypeKey),
+        );
+        expect(nextTopicTask.requiresHeavy, isTrue);
+        expect(
+          nextTopicTask.subjectId,
+          equals('math'),
+          reason: 'next-topic prep must carry the lesson subjectId',
+        );
+
+        // No background (non-prep) enqueue calls should also be made —
+        // the three tasks are all prep tasks.
+        expect(capturingExecutor.capturedEnqueuedDescriptions, isEmpty);
+      });
+
+      test(
+          'endLesson defers heavy prep under CPU pressure and resumes '
+          'on recovery', () async {
+        // System starts under heavy load → heavy prep must defer.
+        final monitor = MutableFakeSystemMonitorService(
+          canRunHeavyPrepNowValue: false,
+        );
+        final taskManager = LlmTaskManager();
+        final realExecutor = IdleExecutor(
+          llmTaskManager: taskManager,
+          systemMonitor: monitor,
+        );
+
+        final llmAgent = LlmAgent(
+          loop: FakeAgentLoop(),
+          toolRegistry: ToolRegistry(),
+          memoryStore: FakeAgentMemoryStore(),
+          idleExecutor: realExecutor,
+          studentId: 'student-1',
+        );
+
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+          llmAgent: llmAgent,
+        );
+
+        final sessionManager = await service.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          localeName: 'en',
+        );
+        await sessionManager.sendMessage('Hello').toList();
+        await service.endLesson();
+
+        // Fire-and-forget enqueue calls from _enqueueBackgroundTasks
+        // schedule _tryExecuteNext on the event loop; flush microtasks so
+        // the deferral decision has been applied.
+        await Future.delayed(Duration.zero);
+        await Future.delayed(Duration.zero);
+
+        // Under CPU pressure: all three tasks queued, none started.
+        expect(realExecutor.hasPendingTasks, isTrue);
+        expect(realExecutor.queue.length, equals(3));
+        for (final task in realExecutor.queue) {
+          expect(
+            task.isCompleted,
+            isFalse,
+            reason: '${task.description} must not run under CPU pressure',
+          );
+          expect(
+            task.isRunning,
+            isFalse,
+            reason: '${task.description} must not be running under CPU pressure',
+          );
+        }
+
+        // System recovers — drain the deferred queue.
+        monitor.canRunHeavyPrepNow = true;
+        while (realExecutor.hasPendingTasks) {
+          await realExecutor.processNext();
+          // Allow post-task aggregation microtasks to settle.
+          await Future.delayed(Duration.zero);
+        }
+
+        // All three tasks were attempted (completed or failed, not merely
+        // deferred).
+        expect(realExecutor.queue.length, equals(3));
+        for (final task in realExecutor.queue) {
+          expect(
+            task.isRunning,
+            isFalse,
+            reason: '${task.description} should not still be running',
+          );
+          expect(
+            task.isCompleted || task.error != null,
+            isTrue,
+            reason: '${task.description} should have been attempted, '
+                'not left pending',
+          );
+        }
+
+        realExecutor.dispose();
       });
     });
 

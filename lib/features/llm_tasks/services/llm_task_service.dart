@@ -23,7 +23,11 @@ class LlmTaskService {
     return _manager.tasks.where((t) => t.taskType == taskType).toList();
   }
 
-  List<LlmTask> getFilteredTasks({String? feature, LlmTaskStatus? status, String? taskType}) {
+  List<LlmTask> getTasksBySession(String sessionId) {
+    return _manager.tasks.where((t) => t.sessionId == sessionId).toList();
+  }
+
+  List<LlmTask> getFilteredTasks({String? feature, LlmTaskStatus? status, String? taskType, String? sessionId}) {
     var tasks = _manager.tasks;
     if (feature != null) {
       tasks = tasks.where((t) => t.feature == feature).toList();
@@ -33,6 +37,9 @@ class LlmTaskService {
     }
     if (taskType != null) {
       tasks = tasks.where((t) => t.taskType == taskType).toList();
+    }
+    if (sessionId != null) {
+      tasks = tasks.where((t) => t.sessionId == sessionId).toList();
     }
     return tasks;
   }
@@ -72,11 +79,13 @@ class LlmTaskService {
     required String feature,
     required String modelId,
     String? taskType,
+    String? sessionId,
   }) {
     return _manager.createTask(
       feature: feature,
       modelId: modelId,
       taskType: taskType,
+      sessionId: sessionId,
     );
   }
 

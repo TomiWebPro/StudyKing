@@ -32,6 +32,7 @@ class FakeLlmTaskManager extends LlmTaskManager {
     required String modelId,
     String? description,
     String? taskType,
+    String? sessionId,
   }) {
     final id = 'task_${++_counter}_${DateTime.now().millisecondsSinceEpoch}';
     _tasks.add(LlmTask(
@@ -41,6 +42,7 @@ class FakeLlmTaskManager extends LlmTaskManager {
       startTime: DateTime.now(),
       description: description,
       taskType: taskType,
+      sessionId: sessionId,
     ));
     _notify();
     return id;
@@ -113,6 +115,7 @@ class FakeLlmTaskManager extends LlmTaskManager {
       description: _tasks[idx].description,
       cancelCompleter: completer,
       taskType: _tasks[idx].taskType,
+      sessionId: _tasks[idx].sessionId,
     );
     return completer;
   }
@@ -127,6 +130,7 @@ class FakeLlmTaskManager extends LlmTaskManager {
       modelId: oldTask.modelId,
       description: oldTask.description,
       taskType: oldTask.taskType,
+      sessionId: oldTask.sessionId,
     );
   }
 
@@ -184,6 +188,7 @@ class FakeLlmTaskManager extends LlmTaskManager {
       description: task.description,
       cancelCompleter: task.cancelCompleter,
       taskType: task.taskType,
+      sessionId: task.sessionId,
     );
   }
 }
@@ -1111,7 +1116,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(manager));
       await tester.pumpAndSettle();
 
-      expect(find.byType(DropdownMenu<String>), findsOneWidget);
+      expect(find.byType(DropdownMenu<String>), findsWidgets);
     });
 
     testWidgets('filter dropdown shows All types by default', (tester) async {
@@ -1144,7 +1149,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Open the dropdown
-      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.tap(find.byType(DropdownMenu<String>).first);
       await tester.pumpAndSettle();
 
       expect(find.text('mentor'), findsWidgets);
@@ -1186,7 +1191,7 @@ void main() {
       expect(find.text('2.4K'), findsOneWidget);
 
       // The task-type filter lists the previously-hidden live categories.
-      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.tap(find.byType(DropdownMenu<String>).first);
       await tester.pumpAndSettle();
       expect(find.text('tutor'), findsWidgets);
       expect(find.text('mentor'), findsWidgets);
@@ -1215,7 +1220,7 @@ void main() {
       expect(find.text('Type: tutor'), findsOneWidget);
 
       // Open dropdown and select 'mentor'
-      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.tap(find.byType(DropdownMenu<String>).first);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('mentor').last);
@@ -1246,7 +1251,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Filter to mentor
-      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.tap(find.byType(DropdownMenu<String>).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('mentor').last);
       await tester.pumpAndSettle();
@@ -1255,7 +1260,7 @@ void main() {
       expect(find.text('Type: tutor'), findsNothing);
 
       // Clear filter
-      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.tap(find.byType(DropdownMenu<String>).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('All types').last);
       await tester.pumpAndSettle();
@@ -1280,7 +1285,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Open the dropdown
-      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.tap(find.byType(DropdownMenu<String>).first);
       await tester.pumpAndSettle();
 
       // The PrepCategory key 'pdf_ingestion' should be displayed with the
@@ -1304,7 +1309,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Open the dropdown
-      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.tap(find.byType(DropdownMenu<String>).first);
       await tester.pumpAndSettle();
 
       // The 'all' entry should show the localized 'All types' label.
@@ -1327,7 +1332,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Open the dropdown
-      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.tap(find.byType(DropdownMenu<String>).first);
       await tester.pumpAndSettle();
 
       // 'mentor' is not a PrepCategory key, so it falls back to the raw string.
@@ -1356,7 +1361,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Open dropdown and select the localized 'PDF → Knowledge base' option
-      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.tap(find.byType(DropdownMenu<String>).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('PDF → Knowledge base').last);
       await tester.pumpAndSettle();
@@ -1392,6 +1397,170 @@ void main() {
       await tester.pump();
 
       expect(find.text('2 active'), findsOneWidget);
+    });
+
+    // =====================
+    // SESSION FILTER & PILL
+    // =====================
+    testWidgets('shows session filter dropdown in app bar', (tester) async {
+      manager.createTask(
+        feature: 'teaching',
+        modelId: 'gpt-4',
+        sessionId: 'sess_001',
+      );
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // There are now two DropdownMenus: task-type and session.
+      expect(find.byType(DropdownMenu<String>), findsWidgets);
+      // The session dropdown label should be visible.
+      expect(find.text('Session'), findsWidgets);
+    });
+
+    testWidgets('session filter shows All sessions by default', (tester) async {
+      manager.createTask(feature: 'teaching', modelId: 'gpt-4', sessionId: 'sess_001');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      expect(find.text('All sessions'), findsWidgets);
+    });
+
+    testWidgets('session filter dropdown shows distinct session IDs',
+        (tester) async {
+      manager.createTask(feature: 'teaching', modelId: 'gpt-4', sessionId: 'sess_001');
+      manager.createTask(feature: 'teaching', modelId: 'gpt-4', sessionId: 'sess_002');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // The session dropdown is the second DropdownMenu (after task-type)
+      await tester.tap(find.byType(DropdownMenu<String>).last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('sess_001'), findsWidgets);
+      expect(find.text('sess_002'), findsWidgets);
+      expect(find.text('All sessions'), findsWidgets);
+
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('selecting a session filters the task list', (tester) async {
+      // Use the same pattern as the passing "clearing session filter" test
+      // (2 tasks with distinct sessions) so ListView.builder lazy rendering
+      // can reliably build both cards without a larger viewport.
+      manager.createTask(feature: 'teaching', modelId: 'gpt-4', sessionId: 'sess_001');
+      manager.createTask(feature: 'teaching', modelId: 'gpt-4', sessionId: 'sess_002');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // Both task cards should be visible initially
+      expect(find.byType(Card), findsNWidgets(2));
+
+      // Open the session filter dropdown (it is the second DropdownMenu)
+      await tester.tap(find.byType(DropdownMenu<String>).last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('sess_001').last);
+      await tester.pumpAndSettle();
+
+      // Only the sess_001 task should remain
+      expect(find.byType(Card), findsOneWidget);
+      expect(find.text('sess_001'), findsWidgets);
+    });
+
+    testWidgets('clearing session filter shows all tasks again', (tester) async {
+      manager.createTask(feature: 'teaching', modelId: 'gpt-4', sessionId: 'sess_001');
+      manager.createTask(feature: 'teaching', modelId: 'gpt-4', sessionId: 'sess_002');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // Filter to sess_001 via the session dropdown (second DropdownMenu)
+      await tester.tap(find.byType(DropdownMenu<String>).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('sess_001').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Card), findsOneWidget);
+
+      // Clear filter — reopen the session dropdown and select 'All sessions'
+      await tester.tap(find.byType(DropdownMenu<String>).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('All sessions').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Card), findsNWidgets(2));
+    });
+
+    testWidgets('session pill is displayed on task cards with sessionId',
+        (tester) async {
+      manager.createTask(feature: 'teaching', modelId: 'gpt-4', sessionId: 'sess_pill_test');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      expect(find.text('sess_pill_test'), findsWidgets);
+    });
+
+    testWidgets('session pill is not displayed when sessionId is null',
+        (tester) async {
+      final id = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+      manager.completeTask(id);
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // No active count Chip (task is done) — no session pill either.
+      expect(find.byType(Chip), findsNothing);
+    });
+
+    testWidgets('combined taskType and session filters work together',
+        (tester) async {
+      manager.createTask(
+        feature: 'teaching',
+        modelId: 'gpt-4',
+        taskType: 'tutor',
+        sessionId: 'sess_001',
+      );
+      manager.createTask(
+        feature: 'teaching',
+        modelId: 'gpt-4',
+        taskType: 'tutor',
+        sessionId: 'sess_002',
+      );
+      manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+        sessionId: 'sess_001',
+      );
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // Filter by taskType 'tutor' (first DropdownMenu)
+      await tester.tap(find.byType(DropdownMenu<String>).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('tutor').last);
+      await tester.pumpAndSettle();
+
+      // Should show 2 tutor tasks
+      expect(find.text('Type: tutor'), findsNWidgets(2));
+
+      // Now also filter by session 'sess_001' (second DropdownMenu)
+      await tester.tap(find.byType(DropdownMenu<String>).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('sess_001').last);
+      await tester.pumpAndSettle();
+
+      // Only the tutor task with sess_001 should remain
+      expect(find.byType(Card), findsOneWidget);
+      expect(find.text('Type: tutor'), findsOneWidget);
+      expect(find.text('sess_001'), findsWidgets);
     });
   });
 }

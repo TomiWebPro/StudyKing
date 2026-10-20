@@ -38,6 +38,7 @@ class LlmAgent {
     required String systemPrompt,
     String feature = 'agent',
     List<Map<String, String>>? history,
+    String? sessionId,
   }) {
     return _loop.run(
       userMessage: message,
@@ -45,6 +46,7 @@ class LlmAgent {
       systemPrompt: systemPrompt,
       feature: feature,
       history: history,
+      sessionId: sessionId,
     );
   }
 
@@ -60,6 +62,7 @@ class LlmAgent {
     String feature = 'agent',
     List<Map<String, String>>? history,
     Future<void> Function(AgentToolCall call)? onToolCall,
+    String? sessionId,
   }) {
     return _loop.runStream(
       userMessage: message,
@@ -68,6 +71,7 @@ class LlmAgent {
       feature: feature,
       history: history,
       onToolCall: onToolCall,
+      sessionId: sessionId,
     );
   }
 

@@ -6322,6 +6322,14 @@
   "@taskTypeFilterLabel": {
     "description": "Label for the task-type filter dropdown in the LLM task manager"
   },
+  "sessionFilterLabel": "Session",
+  "@sessionFilterLabel": {
+    "description": "Label for the session filter dropdown in the LLM task manager"
+  },
+  "allSessions": "All sessions",
+  "@allSessions": {
+    "description": "Filter label showing all sessions"
+  },
   "allSources": "All sources",
   "@allSources": {
     "description": "Filter label showing all sources"

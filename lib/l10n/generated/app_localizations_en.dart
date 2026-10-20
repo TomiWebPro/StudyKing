@@ -4762,6 +4762,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskTypeFilterLabel => 'Filter';
 
   @override
+  String get sessionFilterLabel => 'Session';
+
+  @override
+  String get allSessions => 'All sessions';
+
+  @override
   String get allSources => 'All sources';
 
   @override

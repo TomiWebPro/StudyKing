@@ -25,6 +25,12 @@ class LlmTask {
   /// [LlmUsageRecord.taskType] and Vision Next-Term §4.2.
   final String? taskType;
 
+  /// Identifier of the teaching session (`TutorSession.id`) this task belongs
+  /// to, or `null` when not attributable to a specific lesson. Lets the student
+  /// filter the task list to a single lesson's token spend
+  /// (Vision Next-Term §0 steerability / §4.4).
+  final String? sessionId;
+
   LlmTask({
     required this.id,
     required this.feature,
@@ -38,6 +44,7 @@ class LlmTask {
     this.description,
     this.cancelCompleter,
     this.taskType,
+    this.sessionId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -52,6 +59,7 @@ class LlmTask {
     'error': error,
     'description': description,
     'taskType': taskType,
+    'sessionId': sessionId,
   };
 
   factory LlmTask.fromJson(Map<String, dynamic> json) => LlmTask(
@@ -69,6 +77,7 @@ class LlmTask {
     error: json['error'] as String?,
     description: json['description'] as String?,
     taskType: json['taskType'] as String?,
+    sessionId: json['sessionId'] as String?,
   );
 
   LlmTask copyWith({
@@ -84,6 +93,7 @@ class LlmTask {
     String? description,
     Completer<void>? cancelCompleter,
     String? taskType,
+    String? sessionId,
   }) {
     return LlmTask(
       id: id ?? this.id,
@@ -98,6 +108,7 @@ class LlmTask {
       description: description ?? this.description,
       cancelCompleter: cancelCompleter ?? this.cancelCompleter,
       taskType: taskType ?? this.taskType,
+      sessionId: sessionId ?? this.sessionId,
     );
   }
 }
@@ -173,6 +184,7 @@ class LlmTaskManager {
     required String modelId,
     String? description,
     String? taskType,
+    String? sessionId,
   }) {
     final id = 'task_${++_counter}_${DateTime.now().millisecondsSinceEpoch}';
     _tasks.add(LlmTask(
@@ -182,6 +194,7 @@ class LlmTaskManager {
       startTime: DateTime.now(),
       description: description,
       taskType: taskType,
+      sessionId: sessionId,
     ));
     if (_tasks.length > 1000) {
       _tasks.removeRange(0, _tasks.length - 1000);
@@ -259,6 +272,7 @@ class LlmTaskManager {
       modelId: oldTask.modelId,
       description: oldTask.description,
       taskType: oldTask.taskType,
+      sessionId: oldTask.sessionId,
     );
   }
 

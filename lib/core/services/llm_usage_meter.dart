@@ -19,6 +19,13 @@ class LlmUsageRecord {
   /// or `null` when it could not be classified. Enables cost-per-task tracking.
   final String? taskType;
 
+  /// Identifier of the teaching session (`TutorSession.id`) that triggered this
+  /// LLM call, or `null` when the usage is not attributable to a specific
+  /// lesson (e.g. mentor turns, background prep). Enables per-lesson
+  /// token/cost drill-down in the LLM task-manager portal
+  /// (Vision Next-Term §0 steerability / §4.4 prep-vs-live).
+  final String? sessionId;
+
   LlmUsageRecord({
     required this.id,
     required this.feature,
@@ -29,6 +36,7 @@ class LlmUsageRecord {
     required this.timestamp,
     this.success = true,
     this.taskType,
+    this.sessionId,
   });
 
   int get totalTokens => inputTokens + outputTokens;
@@ -43,6 +51,7 @@ class LlmUsageRecord {
     'timestamp': timestamp.toIso8601String(),
     'success': success,
     'taskType': taskType,
+    'sessionId': sessionId,
   };
 
   factory LlmUsageRecord.fromJson(Map<String, dynamic> json) => LlmUsageRecord(
@@ -55,6 +64,7 @@ class LlmUsageRecord {
     timestamp: DateTime.parse(json['timestamp'] as String),
     success: json['success'] as bool? ?? true,
     taskType: json['taskType'] as String?,
+    sessionId: json['sessionId'] as String?,
   );
 }
 
@@ -119,6 +129,7 @@ class LlmUsageMeter {
     required int outputTokens,
     bool success = true,
     String? taskType,
+    String? sessionId,
   }) {
     final pricing = UsageRecord.pricingConfig;
     final cost = pricing.calculateTotalCost(inputTokens, outputTokens, 0);
@@ -132,6 +143,7 @@ class LlmUsageMeter {
       timestamp: DateTime.now(),
       success: success,
       taskType: taskType,
+      sessionId: sessionId,
     );
     _records.add(record);
     if (_records.length > 1000) {
@@ -141,15 +153,25 @@ class LlmUsageMeter {
     return record;
   }
 
-  List<LlmUsageRecord> getRecords({String? feature, int? limit}) {
+  List<LlmUsageRecord> getRecords({String? feature, int? limit, String? sessionId}) {
     var result = _records.reversed.toList();
     if (feature != null) {
       result = result.where((r) => r.feature == feature).toList();
+    }
+    if (sessionId != null) {
+      result = result.where((r) => r.sessionId == sessionId).toList();
     }
     if (limit != null && limit < result.length) {
       result = result.take(limit).toList();
     }
     return result;
+  }
+
+  /// Returns usage records attributed to [sessionId], most recent first.
+  /// Used by the LLM task-manager portal to show per-lesson token/cost
+  /// drill-down (Vision Next-Term §0 steerability).
+  List<LlmUsageRecord> getRecordsBySession(String sessionId) {
+    return _records.reversed.where((r) => r.sessionId == sessionId).toList();
   }
 
   Map<String, int> getTotalTokensPerFeature() {

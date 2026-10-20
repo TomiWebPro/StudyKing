@@ -145,6 +145,55 @@ void main() {
       final restored = LlmTask.fromJson(json);
       expect(restored.status, LlmTaskStatus.cancelled);
     });
+
+    test('toJson/fromJson round-trip preserves sessionId', () {
+      final original = LlmTask(
+        id: 'rt-sess',
+        feature: 'teaching',
+        modelId: 'gpt-4',
+        startTime: DateTime(2026, 6, 1),
+        taskType: 'tutor',
+        sessionId: 'sess_newton_001',
+      );
+      final json = original.toJson();
+      final restored = LlmTask.fromJson(json);
+      expect(restored.sessionId, equals('sess_newton_001'));
+    });
+
+    test('toJson/fromJson round-trip with null sessionId', () {
+      final original = LlmTask(
+        id: 'rt-null',
+        feature: 'chat',
+        modelId: 'gpt-4',
+        startTime: DateTime(2026, 1, 1),
+      );
+      final json = original.toJson();
+      final restored = LlmTask.fromJson(json);
+      expect(restored.sessionId, isNull);
+    });
+
+    test('copyWith can set sessionId', () {
+      final task = LlmTask(
+        id: 'task_1',
+        feature: 'chat',
+        modelId: 'gpt-4',
+        startTime: DateTime(2026, 1, 1),
+      );
+      final updated = task.copyWith(sessionId: 'sess_001');
+      expect(updated.sessionId, equals('sess_001'));
+    });
+
+    test('copyWith preserves existing sessionId when not overridden', () {
+      final task = LlmTask(
+        id: 'task_1',
+        feature: 'chat',
+        modelId: 'gpt-4',
+        startTime: DateTime(2026, 1, 1),
+        sessionId: 'sess_001',
+      );
+      final updated = task.copyWith(status: LlmTaskStatus.done);
+      expect(updated.sessionId, equals('sess_001'));
+    });
   });
 
   group('LlmTaskManager', () {
@@ -443,6 +492,58 @@ void main() {
       final taskId = manager.createTask(feature: 'chat', modelId: 'gpt-4');
       manager.completeTask(taskId);
       expect(manager.activeTasks, isEmpty);
+    });
+
+    test('createTask stores sessionId on the created task', () {
+      final taskId = manager.createTask(
+        feature: 'teaching',
+        modelId: 'gpt-4',
+        sessionId: 'sess_newton_001',
+      );
+      final task = manager.tasks.firstWhere((t) => t.id == taskId);
+      expect(task.sessionId, equals('sess_newton_001'));
+    });
+
+    test('createTask defaults sessionId to null when not provided', () {
+      final taskId = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+      final task = manager.tasks.firstWhere((t) => t.id == taskId);
+      expect(task.sessionId, isNull);
+    });
+
+    test('retryTask propagates sessionId from the original task', () {
+      final taskId = manager.createTask(
+        feature: 'teaching',
+        modelId: 'gpt-4',
+        sessionId: 'sess_newton_001',
+      );
+      manager.failTask(taskId, 'error');
+
+      final retryId = manager.retryTask(taskId);
+      final retried = manager.tasks.firstWhere((t) => t.id == retryId);
+      expect(retried.sessionId, equals('sess_newton_001'));
+      expect(retried.feature, 'teaching');
+    });
+
+    test('rapid successive recordUsage calls persist sessionId across re-init',
+        () async {
+      for (var i = 0; i < 5; i++) {
+        manager.createTask(
+          feature: 'teaching',
+          modelId: 'gpt-4',
+          sessionId: 'sess_burst_$i',
+        );
+      }
+      await manager.persistenceComplete;
+
+      final reloaded = LlmTaskManager();
+      await reloaded.init();
+      expect(reloaded.tasks.length, 5);
+      for (var i = 0; i < 5; i++) {
+        expect(
+          reloaded.tasks.any((t) => t.sessionId == 'sess_burst_$i'),
+          isTrue,
+        );
+      }
     });
   });
 }

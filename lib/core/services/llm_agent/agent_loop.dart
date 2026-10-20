@@ -54,12 +54,14 @@ class AgentLoop {
     required String systemPrompt,
     String feature = 'agent',
     List<Map<String, String>>? history,
+    String? sessionId,
   }) async {
     final taskType = LlmTaskType.fromFeature(feature)?.name;
     final taskId = _taskManager?.createTask(
       feature: feature,
       modelId: _modelId,
       taskType: taskType,
+      sessionId: sessionId,
     ) ?? '';
     _taskManager?.startTask(taskId);
 
@@ -94,6 +96,7 @@ class AgentLoop {
           // prompt, which chat also takes separately as `systemPrompt`.
           history: messages.sublist(1, messages.length - 1),
           feature: feature,
+          sessionId: sessionId,
         );
 
         if (result.isFailure) {
@@ -228,12 +231,14 @@ class AgentLoop {
     String feature = 'agent',
     List<Map<String, String>>? history,
     Future<void> Function(AgentToolCall call)? onToolCall,
+    String? sessionId,
   }) async* {
     final taskType = LlmTaskType.fromFeature(feature)?.name;
     final taskId = _taskManager?.createTask(
           feature: feature,
           modelId: _modelId,
           taskType: taskType,
+          sessionId: sessionId,
         ) ??
         '';
     _taskManager?.startTask(taskId);
@@ -267,6 +272,7 @@ class AgentLoop {
           systemPrompt: _buildAgentSystemPrompt(systemPrompt),
           history: messages.sublist(1, messages.length - 1),
           feature: feature,
+          sessionId: sessionId,
         )) {
           buffer.write(chunk);
           final current = buffer.toString();

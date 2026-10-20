@@ -151,7 +151,18 @@ class ConversationManager {
           sessionId: sessionId,
           repository: persistenceRepo,
           summarizer: (messages) => _summarizeMessages(messages, llmService, modelId),
-        );
+        ) {
+    // Wire the LLM service's token-usage callback so this session's
+    // totalTokensUsed reflects actual API-returned counts (input + output)
+    // rather than the previous chars/4 heuristic. The callback is invoked
+    // from LlmService._recordCompletion on every completed LLM call —
+    // streaming and non-streaming — so removing the per-line
+    // `totalTokensUsed += content.length ~/ 4` increments below is safe.
+    // (Vision Next-Term thesis §0: students must see where tokens go.)
+    _llmService.onTokenUsage = (inputTokens, outputTokens, model) {
+      totalTokensUsed += inputTokens + outputTokens;
+    };
+  }
 
   List<ConversationMessage> get messages => _memory.getHistory();
   String get capturedExerciseQuestion => _lastExerciseQuestion;
@@ -198,6 +209,7 @@ class ConversationManager {
       modelId: _modelId,
       systemPrompt: entry.systemPrompt,
       feature: 'teaching_lesson_plan',
+      sessionId: sessionId,
     );
 
     Future<Result<LessonPlan>> buildDefaultPlan() async {
@@ -220,7 +232,6 @@ class ConversationManager {
       return buildDefaultPlan();
     }
     final response = result.data!;
-    totalTokensUsed += response.length ~/ 4;
 
     final plan = LessonPlan.fromJson(response);
     if (plan != null) {
@@ -351,7 +362,6 @@ class ConversationManager {
     }
 
     final assistantContent = buffer.toString();
-    totalTokensUsed += assistantContent.length ~/ 4;
     { final memResult = await _memory.addAssistantMessage(assistantContent); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
 
     if (_pendingExerciseQuestionCapture) {
@@ -409,7 +419,6 @@ class ConversationManager {
     }
 
     final assistantContent = buffer.toString();
-    totalTokensUsed += assistantContent.length ~/ 4;
     { final memResult = await _memory.addAssistantMessage(assistantContent); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
     _speakResponse(assistantContent);
   }
@@ -446,6 +455,7 @@ class ConversationManager {
         feature: feature,
         history: history,
         onToolCall: _recordToolCallInMemory,
+        sessionId: sessionId,
       );
     }
     return _llmService.chatStream(
@@ -454,6 +464,7 @@ class ConversationManager {
       memory: _memory,
       systemPrompt: systemPrompt,
       feature: feature,
+      sessionId: sessionId,
     );
   }
 
@@ -691,13 +702,13 @@ class ConversationManager {
         modelId: _modelId,
         systemPrompt: entry.systemPrompt,
         feature: 'teaching_summary',
+        sessionId: sessionId,
       );
       if (result.isFailure) {
         _logger.w('Failed to generate summary: ${result.error}');
         return Result.failure(result.error ?? 'Failed to generate summary');
       }
       final summary = result.data!;
-      totalTokensUsed += summary.length ~/ 4;
       return Result.success(summary);
     } catch (e, stack) {
       _logger.w('Failed to generate summary', e, stack);

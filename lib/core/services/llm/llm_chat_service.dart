@@ -148,6 +148,20 @@ class LlmService {
   final LlmResponseCache? _cache;
   final LlmRetryConfig _retryConfig;
 
+  /// Mutable, post-construction hook for consumers (e.g. ConversationManager)
+  /// to receive actual API-returned input + output token counts on every LLM
+  /// call — including streaming turns where the provider returns usage data in
+  /// the final SSE chunk. Replaces the previous `chars/4` heuristic that
+  /// `ConversationManager` used for its per-session `totalTokensUsed`.
+  ///
+  /// Invoked from [_recordCompletion], which every provider path
+  /// (streaming + non-streaming) converges on, so the callback fires exactly
+  /// once per completed LLM call. When the provider does not return usage
+  /// data, the estimated counts from [_estimateInputTokens] /
+  /// `content.length ~/ 4` are passed instead — still more accurate than the
+  /// previous approach of always using `chars/4` on the assembled response.
+  void Function(int inputTokens, int outputTokens, String model)? onTokenUsage;
+
   /// Client-side throttling: minimum 500ms between calls (B3)
   DateTime _lastCallTime = DateTime.now().subtract(const Duration(seconds: 1));
   static const Duration _minCallInterval = Duration(milliseconds: 500);
@@ -252,6 +266,7 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
     required Stream<String> Function({
       required String message,
       required String modelId,
@@ -260,6 +275,7 @@ class LlmService {
       List<Map<String, String>>? history,
       String feature,
       String? taskType,
+      String? sessionId,
     }) primaryStream,
     void Function()? onFallback,
   }) async* {
@@ -280,6 +296,7 @@ class LlmService {
           history: history,
           feature: feature,
           taskType: taskType,
+          sessionId: sessionId,
         )) {
           yield chunk;
           hasEmitted = true;
@@ -314,6 +331,7 @@ class LlmService {
               history: history,
               feature: feature,
               taskType: taskType,
+              sessionId: sessionId,
             );
             return;
           }
@@ -337,6 +355,7 @@ class LlmService {
               history: history,
               feature: feature,
               taskType: taskType,
+              sessionId: sessionId,
             );
             return;
           }
@@ -363,6 +382,7 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
     final backupConfig = LlmConfiguration(
       provider: config.backupProvider!,
@@ -378,6 +398,9 @@ class LlmService {
       cache: _cache,
       retryConfig: _retryConfig,
     );
+    // Propagate the per-session token-usage callback so fallback calls are
+    // also reflected in ConversationManager.totalTokensUsed.
+    backupService.onTokenUsage = onTokenUsage;
     yield* backupService.chatStream(
       message: message,
       modelId: modelId,
@@ -386,6 +409,7 @@ class LlmService {
       history: history,
       feature: feature,
       taskType: taskType,
+      sessionId: sessionId,
     );
   }
 
@@ -403,6 +427,7 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
     required Future<Result<String>> Function({
       required String message,
       required String modelId,
@@ -411,6 +436,7 @@ class LlmService {
       List<Map<String, String>>? history,
       String feature,
       String? taskType,
+      String? sessionId,
     }) primaryCall,
     void Function()? onFallback,
   }) async {
@@ -428,6 +454,7 @@ class LlmService {
           history: history,
           feature: feature,
           taskType: taskType,
+          sessionId: sessionId,
         );
       } catch (e) {
         // Convert thrown exceptions (e.g. TimeoutException, SocketException)
@@ -472,6 +499,8 @@ class LlmService {
             cache: _cache,
             retryConfig: _retryConfig,
           );
+          // Propagate the per-session token-usage callback for the fallback call.
+          backupService.onTokenUsage = onTokenUsage;
           return await backupService.chat(
             message: message,
             modelId: config.backupModel ?? modelId,
@@ -480,6 +509,7 @@ class LlmService {
             history: history,
             feature: '$feature (fallback)',
             taskType: taskType,
+            sessionId: sessionId,
           );
         }
         // No backup — return the failure.
@@ -506,6 +536,7 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     if (config.apiKey.isEmpty) {
       return Result.failure('API key is empty');
@@ -533,6 +564,7 @@ class LlmService {
       history: history,
       feature: feature,
       taskType: taskType,
+      sessionId: sessionId,
       onFallback: () => usedBackup = true,
       primaryCall: ({
         required String message,
@@ -542,16 +574,17 @@ class LlmService {
         List<Map<String, String>>? history,
         String feature = 'general',
         String? taskType,
+        String? sessionId,
       }) async {
         switch (config.provider) {
           case LlmProvider.openRouter:
-            return await _callOpenRouter(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
+            return await _callOpenRouter(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType, sessionId: sessionId);
           case LlmProvider.ollama:
-            return await _callOllama(message, modelId, memory: memory, history: history, feature: feature, taskType: taskType);
+            return await _callOllama(message, modelId, memory: memory, history: history, feature: feature, taskType: taskType, sessionId: sessionId);
           case LlmProvider.openAI:
-            return await _callOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
+            return await _callOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType, sessionId: sessionId);
           case LlmProvider.custom:
-            return await _callOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
+            return await _callOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType, sessionId: sessionId);
         }
       },
     );
@@ -577,6 +610,7 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
     if (config.apiKey.isEmpty) {
       yield 'API key not configured. Please set up an API key in Settings to use AI features.';
@@ -606,6 +640,7 @@ class LlmService {
       history: history,
       feature: feature,
       taskType: taskType,
+      sessionId: sessionId,
       onFallback: () => usedBackup = true,
       primaryStream: ({
         required String message,
@@ -615,16 +650,17 @@ class LlmService {
         List<Map<String, String>>? history,
         String feature = 'general',
         String? taskType,
+        String? sessionId,
       }) {
         switch (config.provider) {
           case LlmProvider.openRouter:
-            return _streamOpenRouter(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
+            return _streamOpenRouter(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType, sessionId: sessionId);
           case LlmProvider.ollama:
-            return _streamOllama(message, modelId, memory: memory, history: history, feature: feature, taskType: taskType);
+            return _streamOllama(message, modelId, memory: memory, history: history, feature: feature, taskType: taskType, sessionId: sessionId);
           case LlmProvider.openAI:
-            return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
+            return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType, sessionId: sessionId);
           case LlmProvider.custom:
-            return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
+            return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType, sessionId: sessionId);
         }
       },
     ).transform(
@@ -703,6 +739,7 @@ class LlmService {
     required int outputTokens,
     int? tokensUsed,
     String? taskType,
+    String? sessionId,
   }) {
     _completeTask(
       taskId,
@@ -717,7 +754,16 @@ class LlmService {
       inputTokens: inputTokens,
       outputTokens: outputTokens,
       taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name,
+      sessionId: sessionId,
     );
+    // Notify consumers with the actual API-returned (or estimated) token
+    // counts. Every provider path — streaming and non-streaming — converges
+    // here, so this single call site replaces the per-path chars/4 heuristic
+    // that ConversationManager previously used for its per-session
+    // totalTokensUsed counter.
+    // (Vision Next-Term thesis §0: students must see where tokens go.)
+    config.onTokenUsage?.call(inputTokens, outputTokens, modelId);
+    onTokenUsage?.call(inputTokens, outputTokens, modelId);
   }
 
   void _failTask(String taskId, String error) {
@@ -734,8 +780,9 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name, sessionId: sessionId) ?? '';
     _initTask(taskId);
     await _throttle();
     final url = _openRouterUrl;
@@ -761,7 +808,7 @@ class LlmService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final content = data['choices'][0]['message']['content'] as String;
-      _trackUsage(data, modelId, feature, taskId: taskId, taskType: taskType);
+      _trackUsage(data, modelId, feature, taskId: taskId, taskType: taskType, sessionId: sessionId);
       return Result.success(content);
     }
     final errorMsg = _errorForStatusCode(response.statusCode, 'OpenRouter');
@@ -777,8 +824,9 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name, sessionId: sessionId) ?? '';
     _initTask(taskId);
     await _throttle();
     final url = _openRouterUrl;
@@ -856,6 +904,7 @@ class LlmService {
         inputTokens: inputTokens,
         outputTokens: outputTokens,
         taskType: taskType,
+        sessionId: sessionId,
       );
     } catch (e) {
       _failTask(taskId, e.toString());
@@ -870,8 +919,9 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name, sessionId: sessionId) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.ollamaDefaultUrl;
@@ -904,6 +954,7 @@ class LlmService {
         inputTokens: inputTokens,
         outputTokens: outputTokens,
         taskType: taskType,
+        sessionId: sessionId,
       );
       return Result.success(content);
     }
@@ -919,8 +970,9 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name, sessionId: sessionId) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.ollamaDefaultUrl;
@@ -995,6 +1047,7 @@ class LlmService {
         inputTokens: inputTokens,
         outputTokens: outputTokens,
         taskType: taskType,
+        sessionId: sessionId,
       );
     } catch (e) {
       _failTask(taskId, e.toString());
@@ -1010,8 +1063,9 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name, sessionId: sessionId) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.openAIDefaultUrl;
@@ -1036,7 +1090,7 @@ class LlmService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final content = data['choices'][0]['message']['content'] as String;
-      _trackUsage(data, modelId, feature, taskId: taskId, taskType: taskType);
+      _trackUsage(data, modelId, feature, taskId: taskId, taskType: taskType, sessionId: sessionId);
       return Result.success(content);
     }
     final errorMsg = _errorForStatusCode(response.statusCode, 'OpenAI');
@@ -1052,8 +1106,9 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name, sessionId: sessionId) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.openAIDefaultUrl;
@@ -1130,6 +1185,7 @@ class LlmService {
         inputTokens: inputTokens,
         outputTokens: outputTokens,
         taskType: taskType,
+        sessionId: sessionId,
       );
     } catch (e) {
       _failTask(taskId, e.toString());
@@ -1141,16 +1197,14 @@ class LlmService {
     return (systemPrompt.length + message.length) ~/ 4;
   }
 
-  void _trackUsage(Map<String, dynamic> responseData, String modelId, String feature, {String taskId = '', String? taskType}) {
+  void _trackUsage(Map<String, dynamic> responseData, String modelId, String feature, {String taskId = '', String? taskType, String? sessionId}) {
     final usage = responseData['usage'] as Map<String, dynamic>?;
-    if (usage != null && config.onTokenUsage != null) {
-      final inputTokens = usage['prompt_tokens'] as int? ?? 0;
-      final outputTokens = usage['completion_tokens'] as int? ?? 0;
-      config.onTokenUsage!(inputTokens, outputTokens, modelId);
-    }
     if (usage != null) {
       final inputTokens = usage['prompt_tokens'] as int? ?? 0;
       final outputTokens = usage['completion_tokens'] as int? ?? 0;
+      // _recordCompletion now invokes onTokenUsage internally, so we no
+      // longer call config.onTokenUsage here — that would double-count on the
+      // non-streaming OpenRouter/OpenAI paths.
       _recordCompletion(
         taskId: taskId,
         feature: feature,
@@ -1158,6 +1212,7 @@ class LlmService {
         inputTokens: inputTokens,
         outputTokens: outputTokens,
         taskType: taskType,
+        sessionId: sessionId,
       );
     } else {
       _completeTask(taskId);

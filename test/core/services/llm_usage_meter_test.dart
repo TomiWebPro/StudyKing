@@ -94,6 +94,50 @@ void main() {
       expect(restored.success, isFalse);
       expect(restored.cost, 0.0);
     });
+
+    test('toJson/fromJson round-trip preserves sessionId', () {
+      final original = LlmUsageRecord(
+        id: 'rt-sess',
+        feature: 'teaching',
+        modelId: 'gpt-4',
+        inputTokens: 100,
+        outputTokens: 50,
+        cost: 0.002,
+        timestamp: DateTime(2026, 6, 1),
+        sessionId: 'sess_newton_001',
+      );
+      final json = original.toJson();
+      final restored = LlmUsageRecord.fromJson(json);
+      expect(restored.sessionId, equals('sess_newton_001'));
+    });
+
+    test('toJson/fromJson round-trip with null sessionId', () {
+      final original = LlmUsageRecord(
+        id: 'rt-null-sess',
+        feature: 'chat',
+        modelId: 'gpt-4',
+        inputTokens: 10,
+        outputTokens: 5,
+        cost: 0.0,
+        timestamp: DateTime(2026, 1, 1),
+      );
+      final json = original.toJson();
+      final restored = LlmUsageRecord.fromJson(json);
+      expect(restored.sessionId, isNull);
+    });
+
+    test('sessionId defaults to null when not provided', () {
+      final record = LlmUsageRecord(
+        id: 'r1',
+        feature: 'chat',
+        modelId: 'gpt-4',
+        inputTokens: 0,
+        outputTokens: 0,
+        cost: 0.0,
+        timestamp: DateTime.now(),
+      );
+      expect(record.sessionId, isNull);
+    });
   });
 
   group('LlmUsageMeter', () {
@@ -396,6 +440,77 @@ void main() {
         meter.recordUsage(id: 'r$i', feature: 'chat', modelId: 'gpt-4', inputTokens: 1, outputTokens: 1);
       }
       expect(meter.getRecords().length, lessThanOrEqualTo(1000));
+    });
+
+    test('recordUsage stores sessionId on the record', () {
+      final record = meter.recordUsage(
+        id: 'sess1',
+        feature: 'teaching',
+        modelId: 'gpt-4',
+        inputTokens: 100,
+        outputTokens: 50,
+        sessionId: 'sess_newton_001',
+      );
+      expect(record.sessionId, equals('sess_newton_001'));
+    });
+
+    test('recordUsage defaults sessionId to null when not provided', () {
+      final record = meter.recordUsage(
+        id: 'n1',
+        feature: 'chat',
+        modelId: 'gpt-4',
+        inputTokens: 10,
+        outputTokens: 5,
+      );
+      expect(record.sessionId, isNull);
+    });
+
+    test('getRecords filters by sessionId', () {
+      meter.recordUsage(id: 'a1', feature: 'teaching', modelId: 'gpt-4', inputTokens: 100, outputTokens: 50, sessionId: 'sess_001');
+      meter.recordUsage(id: 'a2', feature: 'teaching', modelId: 'gpt-4', inputTokens: 200, outputTokens: 80, sessionId: 'sess_002');
+      meter.recordUsage(id: 'a3', feature: 'teaching', modelId: 'gpt-4', inputTokens: 50, outputTokens: 20, sessionId: 'sess_001');
+
+      final sess001Records = meter.getRecords(sessionId: 'sess_001');
+      expect(sess001Records, hasLength(2));
+      expect(sess001Records.every((r) => r.sessionId == 'sess_001'), isTrue);
+
+      final sess002Records = meter.getRecords(sessionId: 'sess_002');
+      expect(sess002Records, hasLength(1));
+    });
+
+    test('getRecords with non-existent sessionId returns empty', () {
+      meter.recordUsage(id: 'a1', feature: 'teaching', modelId: 'gpt-4', inputTokens: 10, outputTokens: 5, sessionId: 'sess_001');
+
+      final result = meter.getRecords(sessionId: 'sess_nonexistent');
+      expect(result, isEmpty);
+    });
+
+    test('getRecordsBySession returns only records matching the session', () {
+      meter.recordUsage(id: 'r1', feature: 'teaching', modelId: 'gpt-4', inputTokens: 100, outputTokens: 50, sessionId: 'sess_newton_001');
+      meter.recordUsage(id: 'r2', feature: 'teaching', modelId: 'gpt-4', inputTokens: 200, outputTokens: 80, sessionId: 'sess_other');
+      meter.recordUsage(id: 'r3', feature: 'teaching', modelId: 'gpt-4', inputTokens: 50, outputTokens: 20, sessionId: 'sess_newton_001');
+
+      final records = meter.getRecordsBySession('sess_newton_001');
+      expect(records, hasLength(2));
+      expect(records.every((r) => r.sessionId == 'sess_newton_001'), isTrue);
+      // Most recent first
+      expect(records.first.id, equals('r3'));
+      expect(records.last.id, equals('r1'));
+    });
+
+    test('getRecordsBySession returns empty for non-existent session', () {
+      meter.recordUsage(id: 'r1', feature: 'chat', modelId: 'gpt-4', inputTokens: 10, outputTokens: 5, sessionId: 'sess_001');
+      expect(meter.getRecordsBySession('sess_nonexistent'), isEmpty);
+    });
+
+    test('getRecords returns most recent first within a session filter', () {
+      meter.recordUsage(id: 'r1', feature: 'teaching', modelId: 'gpt-4', inputTokens: 10, outputTokens: 5, sessionId: 'sess_001');
+      meter.recordUsage(id: 'r2', feature: 'teaching', modelId: 'gpt-4', inputTokens: 10, outputTokens: 5, sessionId: 'sess_001');
+      meter.recordUsage(id: 'r3', feature: 'teaching', modelId: 'gpt-4', inputTokens: 10, outputTokens: 5, sessionId: 'sess_002');
+
+      final filtered = meter.getRecords(sessionId: 'sess_001');
+      expect(filtered.first.id, equals('r2'));
+      expect(filtered.last.id, equals('r1'));
     });
   });
 }

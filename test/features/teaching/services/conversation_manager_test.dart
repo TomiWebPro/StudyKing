@@ -45,6 +45,12 @@ class FakeLlmService extends LlmService {
   bool shouldThrowOnChat = false;
   bool shouldThrowStream = false;
 
+  /// Mock token counts passed to [onTokenUsage], simulating API-returned
+  /// usage data so ConversationManager.totalTokensUsed can be validated
+  /// against real counts rather than the chars/4 heuristic.
+  int mockInputTokens = 100;
+  int mockOutputTokens = 200;
+
   /// Captures the last systemPrompt passed to chatStream, for asserting prompt directives.
   String? lastSystemPrompt;
 
@@ -62,8 +68,12 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     if (shouldThrowOnChat) return Result.failure('Simulated LLM chat error');
+    // Simulate the real LlmService._recordCompletion path that invokes the
+    // onTokenUsage callback with actual API-returned token counts.
+    onTokenUsage?.call(mockInputTokens, mockOutputTokens, modelId);
     if (message.contains('Summarize what was covered')) {
       return Result.success(summaryResponse);
     }
@@ -80,6 +90,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
     lastSystemPrompt = systemPrompt;
     lastFeature = feature;
@@ -88,9 +99,15 @@ class FakeLlmService extends LlmService {
       for (final chunk in streamChunks!) {
         yield chunk;
       }
+      // Simulate onTokenUsage invoked from _recordCompletion after the
+      // streaming response completes.
+      onTokenUsage?.call(mockInputTokens, mockOutputTokens, modelId);
       return;
     }
     yield streamResponse;
+    // Simulate onTokenUsage invoked from _recordCompletion after the
+    // streaming response completes.
+    onTokenUsage?.call(mockInputTokens, mockOutputTokens, modelId);
   }
 }
 
@@ -202,6 +219,10 @@ class _ToolCallFakeLlmService extends LlmService {
           ),
         );
 
+  /// Mock token counts for simulating API-returned usage.
+  int mockInputTokens = 50;
+  int mockOutputTokens = 150;
+
   @override
   Stream<String> chatStream({
     required String message,
@@ -212,6 +233,7 @@ class _ToolCallFakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async* {
     messageCalls.add(message);
     historyCalls.add(List<Map<String, String>>.from(history ?? []));
@@ -222,6 +244,8 @@ class _ToolCallFakeLlmService extends LlmService {
       final chunk = words[i] + (i < words.length - 1 ? ' ' : '');
       yield chunk;
     }
+    // Simulate onTokenUsage invoked from _recordCompletion after streaming.
+    onTokenUsage?.call(mockInputTokens, mockOutputTokens, modelId);
   }
 }
 
@@ -724,6 +748,46 @@ void main() {
 
         final session = manager.toSession();
         expect(session.totalTokensUsed, greaterThan(0));
+      });
+
+      test('totalTokensUsed reflects actual API token counts, not chars/4', () async {
+        // Vision Next-Term §0: students must see actual token counts, not
+        // a chars/4 heuristic. The FakeLlmService simulates onTokenUsage
+        // being called with (inputTokens: 100, outputTokens: 200) for each
+        // LLM call. After one sendMessage, totalTokensUsed should be 300.
+        llmService.mockInputTokens = 100;
+        llmService.mockOutputTokens = 200;
+
+        await manager.initialize();
+        await manager.sendMessage('Hello').toList();
+
+        // 100 + 200 = 300, NOT content.length ~/ 4 (which would be ~3 for "Mock tutor response")
+        expect(manager.totalTokensUsed, equals(300));
+        final session = manager.toSession();
+        expect(session.totalTokensUsed, equals(300));
+      });
+
+      test('totalTokensUsed accumulates across multiple turns', () async {
+        llmService.mockInputTokens = 150;
+        llmService.mockOutputTokens = 250;
+
+        await manager.initialize();
+        await manager.sendMessage('Hello').toList();
+        await manager.sendMessage('Tell me more').toList();
+
+        // Each turn triggers one onTokenUsage call: 2 × (150 + 250) = 800
+        expect(manager.totalTokensUsed, equals(800));
+      });
+
+      test('totalTokensUsed reflects actual counts from generateLessonPlan', () async {
+        // generateLessonPlan uses the non-streaming chat() path.
+        llmService.mockInputTokens = 500;
+        llmService.mockOutputTokens = 300;
+
+        await manager.generateLessonPlan(durationMinutes: 45);
+
+        // 500 + 300 = 800, NOT response.length ~/ 4
+        expect(manager.totalTokensUsed, equals(800));
       });
     });
 

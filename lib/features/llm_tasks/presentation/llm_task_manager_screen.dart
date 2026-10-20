@@ -25,6 +25,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
   final Set<String> _notifiedFailedTaskIds = {};
   bool _inDidChangeDependencies = false;
   String? _selectedTaskType;
+  String? _selectedSessionId;
 
   @override
   void initState() {
@@ -104,15 +105,32 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
       appBar: AppBar(
         title: Text(l10n.llmTaskManager),
         actions: [
-          // Task-type filter dropdown (Vision Next-Term §4.2)
+          // Task-type filter dropdown (Vision Next-Term section 4.2)
           Padding(
-            padding: const EdgeInsetsDirectional.only(end: 12),
-            child: _TaskTypeFilterDropdown(
-              taskType: _selectedTaskType,
-              onChanged: (String? newValue) {
-                setState(() => _selectedTaskType = newValue);
-              },
-              allTasks: tasks,
+            padding: const EdgeInsetsDirectional.only(end: 8),
+            child: SizedBox(
+              width: 140,
+              child: _TaskTypeFilterDropdown(
+                taskType: _selectedTaskType,
+                onChanged: (String? newValue) {
+                  setState(() => _selectedTaskType = newValue);
+                },
+                allTasks: tasks,
+              ),
+            ),
+          ),
+          // Session filter dropdown (Vision Next-Term section 0 steerability)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 8),
+            child: SizedBox(
+              width: 140,
+              child: _SessionFilterDropdown(
+                sessionId: _selectedSessionId,
+                onChanged: (String? newValue) {
+                  setState(() => _selectedSessionId = newValue);
+                },
+                allTasks: tasks,
+              ),
             ),
           ),
           if (activeTasks.isNotEmpty)
@@ -161,8 +179,14 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
 
   /// Filters the task list by the selected task-type, if any.
   List<LlmTask> _filteredTasks(List<LlmTask> tasks) {
-    if (_selectedTaskType == null) return tasks;
-    return tasks.where((t) => t.taskType == _selectedTaskType).toList();
+    var result = tasks;
+    if (_selectedTaskType != null) {
+      result = result.where((t) => t.taskType == _selectedTaskType).toList();
+    }
+    if (_selectedSessionId != null) {
+      result = result.where((t) => t.sessionId == _selectedSessionId).toList();
+    }
+    return result;
   }
 
   Widget _buildTokenUsageMeter(
@@ -557,6 +581,19 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
+                      if (task.sessionId != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Chip(
+                            label: Text(
+                              task.sessionId!,
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: cs.secondary,
+                              ),
+                            ),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -770,4 +807,48 @@ String _taskTypeFilterLabel(String taskType, AppLocalizations l10n) {
     };
   }
   return taskType;
+}
+
+/// Dropdown to filter the task list by teaching session ID.
+/// Shows "All sessions" plus one entry per distinct `sessionId` present in
+/// [allTasks]. Tasks without a sessionId are always shown regardless of the
+/// selected session filter — only tasks that *do* carry a sessionId are
+/// constrained, mirroring the per-session attribution criterion in
+/// Vision Next-Term §0 / §4.4.
+class _SessionFilterDropdown extends StatelessWidget {
+  final String? sessionId;
+  final void Function(String?) onChanged;
+  final List<LlmTask> allTasks;
+
+  const _SessionFilterDropdown({
+    required this.sessionId,
+    required this.onChanged,
+    required this.allTasks,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final distinctSessions = allTasks
+        .where((t) => t.sessionId != null)
+        .map((t) => t.sessionId!)
+        .toSet()
+        .toList()
+      ..sort();
+
+    final items = <DropdownMenuEntry<String>>[
+      DropdownMenuEntry(value: 'all', label: l10n.allSessions),
+      ...distinctSessions.map(
+        (s) => DropdownMenuEntry(value: s, label: s),
+      ),
+    ];
+
+    return DropdownMenu<String>(
+      label: Text(l10n.sessionFilterLabel),
+      initialSelection: sessionId ?? 'all',
+      onSelected: (String? newValue) => onChanged(newValue == 'all' ? null : newValue),
+      dropdownMenuEntries: items,
+      leadingIcon: const Icon(Icons.filter_alt, size: 20),
+    );
+  }
 }

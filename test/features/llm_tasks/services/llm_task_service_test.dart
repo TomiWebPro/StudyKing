@@ -270,6 +270,47 @@ void main() {
         final allChat = service.getFilteredTasks(feature: 'chat');
         expect(allChat, hasLength(2));
       });
+
+      test('getTasksBySession returns only matching session tasks', () {
+        service.createTask(feature: 'teaching', modelId: 'm1', sessionId: 'sess_001');
+        service.createTask(feature: 'teaching', modelId: 'm2', sessionId: 'sess_002');
+        service.createTask(feature: 'teaching', modelId: 'm3', sessionId: 'sess_001');
+
+        expect(service.getTasksBySession('sess_001'), hasLength(2));
+        expect(service.getTasksBySession('sess_002'), hasLength(1));
+      });
+
+      test('getTasksBySession returns empty for non-existent session', () {
+        service.createTask(feature: 'teaching', modelId: 'm1', sessionId: 'sess_001');
+        expect(service.getTasksBySession('sess_nonexistent'), isEmpty);
+      });
+
+      test('getTasksBySession returns empty when no tasks have sessions', () {
+        service.createTask(feature: 'chat', modelId: 'm1');
+        expect(service.getTasksBySession('sess_001'), isEmpty);
+      });
+
+      test('getFilteredTasks with sessionId filter', () {
+        service.createTask(feature: 'teaching', modelId: 'm1', sessionId: 'sess_001', taskType: 'tutor');
+        service.createTask(feature: 'teaching', modelId: 'm2', sessionId: 'sess_002', taskType: 'tutor');
+        service.createTask(feature: 'chat', modelId: 'm3', sessionId: 'sess_001', taskType: 'mentor');
+
+        final sess001Tasks = service.getFilteredTasks(sessionId: 'sess_001');
+        expect(sess001Tasks, hasLength(2));
+        expect(sess001Tasks.every((t) => t.sessionId == 'sess_001'), isTrue);
+
+        final combined = service.getFilteredTasks(
+          sessionId: 'sess_001',
+          taskType: 'tutor',
+        );
+        expect(combined, hasLength(1));
+        expect(combined.first.taskType, 'tutor');
+      });
+
+      test('getFilteredTasks with non-existent sessionId returns empty', () {
+        service.createTask(feature: 'teaching', modelId: 'm1', sessionId: 'sess_001');
+        expect(service.getFilteredTasks(sessionId: 'sess_nonexistent'), isEmpty);
+      });
     });
 
     group('taskType queries', () {
