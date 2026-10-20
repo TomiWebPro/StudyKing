@@ -16,11 +16,13 @@ import 'test_helpers.dart';
 /// Hand-written fake that mirrors the existing FakeLessonAgentService
 /// pattern so we don't depend on another test file's fakes.
 class FakeLessonAgentServicePrep extends LessonAgentService {
+  String lastFeature = 'lesson_agent';
   Future<Lesson?> Function({
     required String subjectId,
     required String topicId,
     required String topicTitle,
     String localeName,
+    String feature,
   })? onGenerateLesson;
 
   FakeLessonAgentServicePrep()
@@ -51,13 +53,16 @@ class FakeLessonAgentServicePrep extends LessonAgentService {
     required String topicId,
     required String topicTitle,
     String localeName = 'en',
+    String feature = 'lesson_agent',
   }) async {
+    lastFeature = feature;
     if (onGenerateLesson != null) {
       return onGenerateLesson!(
         subjectId: subjectId,
         topicId: topicId,
         topicTitle: topicTitle,
         localeName: localeName,
+        feature: feature,
       );
     }
     return null;
@@ -145,6 +150,7 @@ void main() {
           required String topicId,
           required String topicTitle,
           String localeName = 'en',
+          String feature = 'lesson_agent',
         }) async {
           return _buildTestLesson(
             subjectId: subjectId,
@@ -198,6 +204,7 @@ void main() {
           required String topicId,
           required String topicTitle,
           String localeName = 'en',
+          String feature = 'lesson_agent',
         }) async {
           capturedLocale = localeName;
           return null;
@@ -220,6 +227,7 @@ void main() {
           required String topicId,
           required String topicTitle,
           String localeName = 'en',
+          String feature = 'lesson_agent',
         }) async {
           capturedLocale = localeName;
           return null;
@@ -234,6 +242,38 @@ void main() {
         });
 
         expect(capturedLocale, 'es');
+      });
+
+      // Vision §0 token principle + §4.1: when PreGenerateLessonTool runs as
+      // an off-period prep task, the underlying LessonAgentService.generateLesson
+      // call must receive feature='lesson_prep' so LlmTaskType.fromFeature maps
+      // it to LlmTaskType.background (a prep category) — not 'generation'
+      // (a live category). This prevents actual lesson-prep tokens from leaking
+      // into PrepBudgetService.totalLiveTokens() (issue: prep-lesson-prep-tokens
+      // misattributed-as-live).
+      test('passes feature: lesson_prep to LessonAgentService', () async {
+        fakeService.onGenerateLesson = ({
+          required String subjectId,
+          required String topicId,
+          required String topicTitle,
+          String localeName = 'en',
+          String feature = 'lesson_agent',
+        }) async {
+          return _buildTestLesson(
+            subjectId: subjectId,
+            topicId: topicId,
+            topicTitle: topicTitle,
+          );
+        };
+
+        final tool = PreGenerateLessonTool(lessonAgentService: fakeService);
+        await tool.execute({
+          'subjectId': 'subj-1',
+          'topicId': 'topic-1',
+          'topicTitle': 'Algebra Basics',
+        });
+
+        expect(fakeService.lastFeature, 'lesson_prep');
       });
     });
 
@@ -265,6 +305,7 @@ void main() {
           required String topicId,
           required String topicTitle,
           String localeName = 'en',
+          String feature = 'lesson_agent',
         }) async {
           return _buildTestLesson(
             subjectId: subjectId,
@@ -296,6 +337,7 @@ void main() {
           required String topicId,
           required String topicTitle,
           String localeName = 'en',
+          String feature = 'lesson_agent',
         }) async {
           return _buildTestLesson(
             subjectId: subjectId,
@@ -342,6 +384,7 @@ void main() {
           required String topicId,
           required String topicTitle,
           String localeName = 'en',
+          String feature = 'lesson_agent',
         }) async {
           return _buildTestLesson(
             subjectId: subjectId,
@@ -376,6 +419,7 @@ void main() {
           required String topicId,
           required String topicTitle,
           String localeName = 'en',
+          String feature = 'lesson_agent',
         }) async {
           llmCalled = true;
           return _buildTestLesson(
@@ -416,6 +460,7 @@ void main() {
           required String topicId,
           required String topicTitle,
           String localeName = 'en',
+          String feature = 'lesson_agent',
         }) async {
           return _buildTestLesson(
             subjectId: subjectId,

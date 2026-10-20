@@ -517,6 +517,48 @@ void main() {
       expect(service.totalLiveTokens(), 0);
     });
 
+    // Issue: prep-lesson-prep-tokens-misattributed-as-live
+    //
+    // Vision §0 token principle: when LessonAgentService.generateLesson() runs
+    // in prep context (feature: 'lesson_prep'), LlmTaskType.fromFeature maps
+    // 'lesson_prep' → LlmTaskType.background, so _recordCompletion records actual
+    // tokens with taskType: 'background' — NOT 'generation' (a live category).
+    // PrepBudgetService.totalLiveTokens() must therefore exclude those tokens,
+    // and totalPrepTokens() must include them.
+    test('lesson_prep tokens (recorded as background) excluded from totalLiveTokens', () {
+      final meter = LlmUsageMeter();
+      // Simulates actual LLM tokens from a prep-context LessonAgentService
+      // call: feature 'lesson_prep' → fromFeature → background taskType.
+      meter.recordUsage(
+        id: 'lesson_prep_actual',
+        feature: 'lesson_prep',
+        modelId: 'gpt-4o',
+        inputTokens: 8000,
+        outputTokens: 3000,
+        taskType: 'background', // what fromFeature('lesson_prep') resolves to
+      );
+      // A live teaching call must remain counted as live.
+      meter.recordUsage(
+        id: 'live_tutor',
+        feature: 'tutor',
+        modelId: 'gpt-4o',
+        inputTokens: 4000,
+        outputTokens: 2000,
+        taskType: 'teaching',
+      );
+
+      final service = PrepBudgetService(meter: meter);
+
+      // The 11k prep tokens are under 'background', a PrepCategory key.
+      expect(service.totalPrepTokens(), 11000);
+      // Live tokens should only contain the 6k teaching record — NOT the
+      // lesson-prep actuals that were misattributed before the fix.
+      expect(service.totalLiveTokens(), 6000);
+      // Partition holds: 11k prep + 6k live = 17k total.
+      expect(service.totalPrepTokens() + service.totalLiveTokens(),
+          meter.getTotalTokens());
+    });
+
     test('totalPrepTokens + totalLiveTokens partitions every meter token', () {
       final meter = LlmUsageMeter();
       meter.recordUsage(

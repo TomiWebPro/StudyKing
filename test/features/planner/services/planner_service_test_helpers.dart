@@ -323,7 +323,7 @@ class ThrowingInitPlanRepository extends PlanRepository {
 }
 
 class StubLessonAgentService implements LessonAgentService {
-  final Future<Lesson?> Function(String subjectId, String topicId, String topicTitle, String localeName) _generate;
+  final Future<Lesson?> Function(String subjectId, String topicId, String topicTitle, String localeName, String feature) _generate;
 
   StubLessonAgentService(this._generate);
 
@@ -333,8 +333,9 @@ class StubLessonAgentService implements LessonAgentService {
     required String topicId,
     required String topicTitle,
     String localeName = 'en',
+    String feature = 'lesson_agent',
   }) {
-    return _generate(subjectId, topicId, topicTitle, localeName);
+    return _generate(subjectId, topicId, topicTitle, localeName, feature);
   }
 
   @override
@@ -344,6 +345,7 @@ class StubLessonAgentService implements LessonAgentService {
     required String topicTitle,
     required String sourceContent,
     String localeName = 'en',
+    String feature = 'lesson_agent',
   }) async => null;
 }
 

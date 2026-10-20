@@ -21,6 +21,12 @@ class _FakeLlmService extends LlmService {
   Result<String>? _nextResult;
   bool shouldThrow = false;
 
+  /// Captures the most recent `feature` value passed to [chat].
+  String lastFeature = 'general';
+
+  /// All feature values received across calls, for multi-call assertions.
+  final List<String> featureHistory = [];
+
   _FakeLlmService() : super(
     config: LlmConfiguration(provider: LlmProvider.ollama, apiKey: 'test-key'),
   );
@@ -38,6 +44,8 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
+    lastFeature = feature;
+    featureHistory.add(feature);
     if (shouldThrow) {
       throw Exception('LLM API error');
     }
@@ -235,6 +243,49 @@ void main() {
         );
 
         expect(lesson, isNull);
+      });
+    });
+
+    group('feature parameter', () {
+      test('passes default feature "lesson_agent" to LlmService.chat', () async {
+        await service.generateLesson(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          localeName: 'en',
+        );
+
+        expect(fakeLlm.lastFeature, 'lesson_agent');
+      });
+
+      test('passes explicit "lesson_prep" feature to LlmService.chat', () async {
+        await service.generateLesson(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          localeName: 'en',
+          feature: 'lesson_prep',
+        );
+
+        expect(fakeLlm.lastFeature, 'lesson_prep');
+      });
+
+      test('passes explicit "lesson_prep" feature in generateLessonFromSource',
+          () async {
+        fakeLlm.setResult(Result.success(jsonEncode([
+          {'type': 'slide', 'content': 'Source slide', 'order': 0},
+        ])));
+
+        await service.generateLessonFromSource(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'From Source',
+          sourceContent: 'Chapter 1',
+          localeName: 'en',
+          feature: 'lesson_prep',
+        );
+
+        expect(fakeLlm.lastFeature, 'lesson_prep');
       });
     });
 

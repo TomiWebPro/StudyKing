@@ -134,6 +134,7 @@ class FakeLessonAgentServicePrep extends LessonAgentService {
     required String topicId,
     required String topicTitle,
     String localeName,
+    String feature,
   })? onGenerateLesson;
 
   FakeLessonAgentServicePrep()
@@ -164,6 +165,7 @@ class FakeLessonAgentServicePrep extends LessonAgentService {
     required String topicId,
     required String topicTitle,
     String localeName = 'en',
+    String feature = 'lesson_agent',
   }) async {
     if (onGenerateLesson != null) {
       return onGenerateLesson!(
@@ -171,6 +173,7 @@ class FakeLessonAgentServicePrep extends LessonAgentService {
         topicId: topicId,
         topicTitle: topicTitle,
         localeName: localeName,
+        feature: feature,
       );
     }
     return null;
@@ -828,6 +831,7 @@ void main() {
           required String topicId,
           required String topicTitle,
           String localeName = 'en',
+          String feature = 'lesson_agent',
         }) async {
           return Lesson(
             id: 'lesson-123',

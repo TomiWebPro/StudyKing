@@ -128,6 +128,13 @@ class PreGenerateLessonTool extends PrepTool {
         topicId: topicId,
         topicTitle: topicTitle,
         localeName: localeName,
+        // Vision §4.1/§4.3 + §0 token principle: when this tool runs as an
+        // off-period prep task, the underlying LLM call must record its tokens
+        // under the 'lesson_prep' feature so LlmTaskType.fromFeature maps it
+        // to a prep-category task type ('background') instead of the live
+        // 'generation' bucket. Without this, actual lesson-prep tokens leak
+        // into totalLiveTokens() and corrupt the prep-vs-live ratio.
+        feature: PrepCategory.lessonPrep.taskTypeKey,
       );
 
       if (taskId.isNotEmpty) {

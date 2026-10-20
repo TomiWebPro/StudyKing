@@ -338,7 +338,7 @@ void main() {
         pendingActionRepo: pendingActionRepo,
         planOrchestrator: planOrchestrator,
         adherenceRepo: fakeAdherenceRepo,
-        lessonAgentService: StubLessonAgentService((s, t, tt, l) async => lesson),
+        lessonAgentService: StubLessonAgentService((s, t, tt, l, f) async => lesson),
       );
       final result = await svcWithAgent.scheduleLesson(
         topicId: 'topic-1',
@@ -363,7 +363,7 @@ void main() {
         pendingActionRepo: pendingActionRepo,
         planOrchestrator: planOrchestrator,
         adherenceRepo: fakeAdherenceRepo,
-        lessonAgentService: StubLessonAgentService((s, t, tt, l) async => null),
+        lessonAgentService: StubLessonAgentService((s, t, tt, l, f) async => null),
       );
       final result = await svcWithAgent.scheduleLesson(
         topicId: 'topic-1',
@@ -387,7 +387,7 @@ void main() {
         pendingActionRepo: pendingActionRepo,
         planOrchestrator: planOrchestrator,
         adherenceRepo: fakeAdherenceRepo,
-        lessonAgentService: StubLessonAgentService((s, t, tt, l) async => throw Exception('gen failed')),
+        lessonAgentService: StubLessonAgentService((s, t, tt, l, f) async => throw Exception('gen failed')),
       );
       final result = await svcWithAgent.scheduleLesson(
         topicId: 'topic-1',
@@ -412,7 +412,7 @@ void main() {
         pendingActionRepo: pendingActionRepo,
         planOrchestrator: planOrchestrator,
         adherenceRepo: fakeAdherenceRepo,
-        lessonAgentService: StubLessonAgentService((s, t, tt, l) async {
+        lessonAgentService: StubLessonAgentService((s, t, tt, l, f) async {
           agentCalled = true;
           return null;
         }),
@@ -445,7 +445,7 @@ void main() {
         pendingActionRepo: pendingActionRepo,
         planOrchestrator: planOrchestrator,
         adherenceRepo: fakeAdherenceRepo,
-        lessonAgentService: StubLessonAgentService((s, t, tt, l) async => lesson),
+        lessonAgentService: StubLessonAgentService((s, t, tt, l, f) async => lesson),
       );
       final result = await svcWithAgent.scheduleLesson(
         topicId: 'topic-1',
@@ -470,7 +470,7 @@ void main() {
         pendingActionRepo: pendingActionRepo,
         planOrchestrator: planOrchestrator,
         adherenceRepo: fakeAdherenceRepo,
-        lessonAgentService: StubLessonAgentService((s, t, tt, l) async => null),
+        lessonAgentService: StubLessonAgentService((s, t, tt, l, f) async => null),
       );
       final result = await svcWithAgent.scheduleLesson(
         topicId: 'topic-1',
@@ -493,7 +493,7 @@ void main() {
         planOrchestrator: planOrchestrator,
         adherenceRepo: fakeAdherenceRepo,
         lessonAgentService: StubLessonAgentService(
-          (s, t, tt, l) async => throw Exception('gen failed'),
+          (s, t, tt, l, f) async => throw Exception('gen failed'),
         ),
       );
       final result = await svcWithAgent.scheduleLesson(
