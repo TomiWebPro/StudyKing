@@ -234,6 +234,20 @@ class PrepBudgetService {
   }
 
   /// Live est. cost spent per category (for §4.2 "est. cost per category").
+  /// Unrecognised / null-taskType records in the meter are ignored — they
+  /// are treated as live spend, not attributed to any prep category, exactly
+  /// as [spendingByCategory] does for tokens. This keeps the per-category
+  /// cost counters consistent with the token counters and prevents the
+  /// `unknown`-bucket total from being inflated across every empty category.
+  Map<PrepCategory, double> costByCategory() {
+    final byType = _meter.getTotalCostPerTaskType();
+    final out = <PrepCategory, double>{};
+    for (final category in PrepCategory.values) {
+      out[category] = byType[category.taskTypeKey] ?? 0.0;
+    }
+    return out;
+  }
+
   /// Total tokens spent across all preparation categories, read straight
   /// from the meter's per-task-type aggregates. Realises the §4.2 "live
   /// counters: tokens per category" counter as an aggregate; the §4.4
@@ -266,15 +280,6 @@ class PrepBudgetService {
       }
     }
     return total;
-  }
-
-  Map<PrepCategory, double> costByCategory() {
-    final byType = _meter.getTotalCostPerTaskType();
-    final out = <PrepCategory, double>{};
-    for (final category in PrepCategory.values) {
-      out[category] = byType[category.taskTypeKey] ?? byType['unknown'] ?? 0.0;
-    }
-    return out;
   }
 
   /// Tokens remaining in [category] against the live meter.

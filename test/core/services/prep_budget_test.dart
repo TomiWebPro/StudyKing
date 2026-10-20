@@ -200,6 +200,66 @@ void main() {
       expect(costs[PrepCategory.pdfIngestion], equals(0.0));
     });
 
+    // Issue: prep-budget-costbycategory-unknown-fallback
+    //
+    // When the meter contains records with taskType: null (grouped under
+    // 'unknown' by getTotalCostPerTaskType), costByCategory() must NOT
+    // attribute that unknown cost to every prep category. It returns 0.0 for
+    // categories that have no spend in their own key, exactly as
+    // spendingByCategory() does for tokens. This is consistent with
+    // totalLiveTokens() which treats 'unknown' as live.
+    test("costByCategory ignores 'unknown' taskType records (no false attribution)", () {
+      final meter = LlmUsageMeter();
+
+      // A recognised prep category record — cost should be attributed here.
+      meter.recordUsage(
+        id: 'prep1',
+        feature: 'prep',
+        modelId: 'gpt-4',
+        inputTokens: 100000,
+        outputTokens: 50000,
+        taskType: 'pdf_ingestion',
+      );
+
+      // An unclassified (null taskType) record — grouped under 'unknown'.
+      // This simulates a live chat whose feature string could not be
+      // classified by LlmTaskType.fromFeature.
+      meter.recordUsage(
+        id: 'live1',
+        feature: 'tutor',
+        modelId: 'gpt-4',
+        inputTokens: 200000,
+        outputTokens: 100000,
+        taskType: null,
+      );
+
+      final service = PrepBudgetService(meter: meter);
+      final costs = service.costByCategory();
+      final byType = meter.getTotalCostPerTaskType();
+
+      // The unknown record has a real cost > 0.
+      expect(byType['unknown'], greaterThan(0));
+
+      // Only the pdf_ingestion cost is attributed to pdfIngestion.
+      expect(costs[PrepCategory.pdfIngestion],
+          equals(byType['pdf_ingestion']));
+      expect(costs[PrepCategory.pdfIngestion], greaterThan(0));
+
+      // Every other prep category — which has no spend in its own key —
+      // must be 0.0, NOT the unknown-bucket cost.
+      expect(costs[PrepCategory.questionVariants], equals(0.0));
+      expect(costs[PrepCategory.lessonPrep], equals(0.0));
+      expect(costs[PrepCategory.embeddings], equals(0.0));
+      expect(costs[PrepCategory.background], equals(0.0));
+
+      // The sum of category costs must equal only the recognised prep cost,
+      // not inflated by the unknown cost.
+      final totalCategoryCost =
+          costs.values.fold(0.0, (sum, c) => sum + c);
+      expect(totalCategoryCost, equals(byType['pdf_ingestion']));
+      expect(totalCategoryCost, lessThan(byType['unknown']!));
+    });
+
     test('custom budget overrides the defaults', () {
       final meter = LlmUsageMeter();
       final custom = PrepBudget(
