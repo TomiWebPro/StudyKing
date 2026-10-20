@@ -208,6 +208,69 @@ Future<Map<String, Uint8List>> renderGoldenTextScaleSweep(
 }
 
 /// Renders a full-screen widget (wrapped in a fresh [MaterialApp] per cell)
+/// across a matrix of [locales] × [sizes] for a SINGLE [themeMode] and returns
+/// a map of golden-path → PNG bytes.
+///
+/// This is the screen-level, single-theme counterpart of
+/// [renderGoldenMatrix] (widget-level), mirroring the relationship between
+/// [renderGoldenMatrix] (single theme) and [renderGoldenMatrixFull] (multi
+/// theme). Use it when a screen golden only needs one theme — typically
+/// `ThemeMode.light` — so the matrix is `locales × sizes` rather than
+/// `locales × sizes × themes`.
+///
+/// Like [renderScreenGoldenMatrixFull], [screenBuilder] is invoked **once per
+/// cell**, producing a fresh widget tree each time. Each fresh tree is handed to
+/// [renderScreenToPng], which builds its own `MaterialApp`, so `Overlay`
+/// entries (used by `AppBar` `Tooltip`/`PopupMenuButton`) never collide.
+///
+/// Every screen placed as `home` must already be wrapped in any needed
+/// `ProviderScope` / `Scaffold` ancestors by [screenBuilder] —
+/// [renderScreenToPng] only adds the `MaterialApp` root.
+///
+/// [textDirection] is forwarded to [renderScreenToPng]; see its documentation
+/// for how it overrides locale-based directionality.
+///
+/// Must be called from within a `testWidgets` callback so that the
+/// `TestWidgetsFlutterBinding` is in the "in test" state (see
+/// [renderWidgetToPng]).
+Future<Map<String, Uint8List>> renderScreenGoldenMatrix(
+  Widget Function(Locale locale, ThemeMode theme) screenBuilder, {
+  required List<Locale> locales,
+  required List<Size> sizes,
+  required ThemeMode themeMode,
+  Brightness? brightness,
+  double pixelRatio = kDefaultPixelRatio,
+  double textScale = 1.0,
+  TextDirection textDirection = TextDirection.ltr,
+  required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
+  required List<Locale> supportedLocales,
+  required GoldenPathBuilder pathBuilder,
+}) async {
+  final results = <String, Uint8List>{};
+
+  for (final locale in locales) {
+    for (final size in sizes) {
+      final path = pathBuilder(locale, size, themeMode);
+      final png = await renderScreenToPng(
+        screenBuilder(locale, themeMode),
+        size: size,
+        pixelRatio: pixelRatio,
+        locale: locale,
+        themeMode: themeMode,
+        textScale: textScale,
+        localizationsDelegates: localizationsDelegates,
+        supportedLocales: supportedLocales,
+        brightness: brightness,
+        textDirection: textDirection,
+      );
+      results[path] = png;
+    }
+  }
+
+  return results;
+}
+
+/// Renders a full-screen widget (wrapped in a fresh [MaterialApp] per cell)
 /// across a matrix of [locales] × [sizes] × [themeModes] and returns a map of
 /// golden-path → PNG bytes.
 ///

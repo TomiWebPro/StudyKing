@@ -448,6 +448,182 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
+  // renderScreenGoldenMatrix — the screen-level single-theme matrix helper.
+  //
+  // This is the single-theme counterpart of renderScreenGoldenMatrixFull and
+  // mirrors the renderGoldenMatrix <-> renderGoldenMatrixFull relationship on the
+  // widget level. Each cell builds a FRESH MaterialApp via `screenBuilder`, so
+  // Overlay-entry reuse errors (Tooltip/PopupMenuButton in an AppBar) cannot
+  // occur — the exact trap a single reused widget instance would trigger.
+  // ---------------------------------------------------------------------------
+  group('renderScreenGoldenMatrix', () {
+    /// A screen whose `AppBar` has a `Tooltip` (needs an Overlay ancestor,
+    /// provided by the MaterialApp `renderScreenToPng` builds internally).
+    Widget tooltipScreen() {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Demo'),
+          actions: [
+            Tooltip(
+              message: 'Action',
+              child: const Icon(Icons.star),
+            ),
+          ],
+        ),
+        body: const Center(child: Text('Body')),
+      );
+    }
+
+    testWidgets('renders one PNG per locale x size for a single theme', (tester) async {
+      final matrix = await renderScreenGoldenMatrix(
+        (_, __) => tooltipScreen(),
+        locales: [const Locale('en'), const Locale('es')],
+        sizes: [const Size(375, 800), const Size(1200, 800)],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en'), Locale('es')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('screen_single', locale, size, theme),
+      );
+
+      // 2 locales x 2 sizes = 4 entries (single theme, no theme dimension).
+      expect(matrix.length, 4);
+
+      for (final entry in matrix.entries) {
+        expect(entry.value, isNotEmpty);
+        // PNG magic bytes (first 4 bytes): 0x89 0x50 0x4E 0x47
+        expect(entry.value[0], 0x89);
+        expect(entry.value[1], 0x50);
+        expect(entry.value[2], 0x4E);
+        expect(entry.value[3], 0x47);
+        expect(entry.key, startsWith('test/goldens/screen_single_'));
+        expect(entry.key, endsWith('.png'));
+      }
+
+      // Only the single requested theme appears in the paths.
+      expect(matrix.keys.where((k) => k.contains('_light.png')), hasLength(4));
+      expect(matrix.keys.where((k) => k.contains('_dark.png')), isEmpty);
+    });
+
+    testWidgets('builds a fresh screen per cell (no shared Overlay entry)', (tester) async {
+      var buildCount = 0;
+      final matrix = await renderScreenGoldenMatrix(
+        (_, __) {
+          buildCount++;
+          return tooltipScreen();
+        },
+        locales: [const Locale('en'), const Locale('es')],
+        sizes: [const Size(375, 800), const Size(1200, 800)],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en'), Locale('es')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('fresh_cell_single', locale, size, theme),
+      );
+
+      // 2 locales x 2 sizes = 4 cells => 4 distinct builds.
+      expect(matrix.length, 4);
+      expect(buildCount, 4);
+      for (final entry in matrix.entries) {
+        expect(entry.value, isNotEmpty);
+      }
+    });
+
+    testWidgets('returns empty map when locales list is empty', (tester) async {
+      final matrix = await renderScreenGoldenMatrix(
+        (_, __) => tooltipScreen(),
+        locales: const [],
+        sizes: [const Size(375, 800)],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('empty_locale_single', locale, size, theme),
+      );
+
+      expect(matrix, isEmpty);
+    });
+
+    testWidgets('returns empty map when sizes list is empty', (tester) async {
+      final matrix = await renderScreenGoldenMatrix(
+        (_, __) => tooltipScreen(),
+        locales: [const Locale('en')],
+        sizes: const [],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('empty_size_single', locale, size, theme),
+      );
+
+      expect(matrix, isEmpty);
+    });
+
+    testWidgets('threads textDirection (RTL differs from LTR)', (tester) async {
+      /// A Scaffold with a leading (left) red box and trailing (right) blue box.
+      /// In LTR the leading icon is on the left; in RTL it moves to the right.
+      Widget directionSensitiveScreen(Locale locale, ThemeMode theme) {
+        final themeData = theme == ThemeMode.dark ? ThemeData.dark() : ThemeData.light();
+        return Theme(
+          data: themeData,
+          child: Scaffold(
+            appBar: AppBar(
+              leading: const SizedBox(
+                width: 30,
+                height: 30,
+                child: ColoredBox(color: Colors.red),
+              ),
+              actions: const [
+                SizedBox(
+                  width: 30,
+                  height: 30,
+                  child: ColoredBox(color: Colors.blue),
+                ),
+              ],
+            ),
+            body: const Center(child: Text('Screen')),
+          ),
+        );
+      }
+
+      final ltr = await renderScreenGoldenMatrix(
+        directionSensitiveScreen,
+        locales: [const Locale('en')],
+        sizes: [const Size(375, 800)],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        textDirection: TextDirection.ltr,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('dir_ltr_single', locale, size, theme),
+      );
+
+      final rtl = await renderScreenGoldenMatrix(
+        directionSensitiveScreen,
+        locales: [const Locale('en')],
+        sizes: [const Size(375, 800)],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        textDirection: TextDirection.rtl,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('dir_rtl_single', locale, size, theme),
+      );
+
+      expect(ltr.values.first, isNotEmpty);
+      expect(rtl.values.first, isNotEmpty);
+      // The AppBar leading/trailing icons swap sides, so the pixels differ.
+      expect(rtl.values.first, isNot(equals(ltr.values.first)));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // renderScreenGoldenMatrixFull — the screen-level full matrix helper.
   //
   // Each cell builds a FRESH MaterialApp via `screenBuilder`, which is what

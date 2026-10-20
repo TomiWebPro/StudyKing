@@ -76,10 +76,10 @@ Like `renderWidgetToPng` but returns an `ImageResult` carrying metadata
 ### `renderScreenToPng`
 
 Like `renderWidgetToPng` but wraps the supplied `screen` widget in a
-`MaterialApp` with the given locale, theme, text-scale, and localisation
-delegates before rendering. Use this for **screen-level** golden tests where
-the widget expects a `MaterialApp` ancestor (for `Theme`, `Overlay`,
-`ScaffoldMessenger`, or `Localizations`).
+`MaterialApp` with the given locale, theme, text-scale, localisation
+delegates, and `textDirection` before rendering. Use this for
+**screen-level** golden tests where the widget expects a `MaterialApp`
+ancestor (for `Theme`, `Overlay`, `ScaffoldMessenger`, or `Localizations`).
 
 ```dart
 Future<Uint8List> renderScreenToPng(
@@ -92,6 +92,7 @@ Future<Uint8List> renderScreenToPng(
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
   required List<Locale> supportedLocales,
   Brightness? brightness,
+  TextDirection textDirection = TextDirection.ltr,
 })
 ```
 
@@ -127,6 +128,12 @@ The optional `brightness` parameter resolves `ThemeMode.system` to light or dark
 mirroring `renderWidgetToPng`. It is ignored when `themeMode` is explicitly
 `ThemeMode.light` or `ThemeMode.dark`.
 
+`textDirection` is applied as a `Directionality` wrapper inside the
+MaterialApp's `builder`, overriding the locale-based directionality resolution
+for screen content (default `TextDirection.ltr`). This lets golden tests force
+RTL rendering to catch layout-mirroring regressions without needing an RTL
+locale.
+
 ### `renderScreenToImageResult`
 
 Like `renderScreenToPng` but returns an `ImageResult` carrying metadata
@@ -154,6 +161,55 @@ Future<Map<String, Uint8List>> renderGoldenMatrix(
 
 Renders across every locale × size combination and returns a map of
 golden-path → PNG bytes.
+
+### `renderScreenGoldenMatrix`
+
+Screen-level, single-theme counterpart of `renderGoldenMatrix` (widget-level).
+Use this for a **screen-level** golden matrix across `locales × sizes` in a
+single theme — e.g. `en`/`es` × phone/desktop in `ThemeMode.light` — without
+the extra `themes` dimension that `renderScreenGoldenMatrixFull` carries:
+
+```dart
+Future<Map<String, Uint8List>> renderScreenGoldenMatrix(
+  Widget Function(Locale locale, ThemeMode theme) screenBuilder, {
+  required List<Locale> locales,
+  required List<Size> sizes,
+  required ThemeMode themeMode,
+  Brightness? brightness,
+  double pixelRatio = 2.0,
+  double textScale = 1.0,
+  TextDirection textDirection = TextDirection.ltr,
+  required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
+  required List<Locale> supportedLocales,
+  required GoldenPathBuilder pathBuilder,
+})
+```
+
+Like `renderScreenGoldenMatrixFull`, `screenBuilder` is invoked **once per
+cell**, producing a fresh `MaterialApp` (and `Overlay`) per cell, so screens
+whose `AppBar` uses `Tooltip`/`PopupMenuButton` render without the
+"entry already present in a different Overlay" error. Pass your `ProviderScope`
++ `Scaffold` wrapping inside `screenBuilder`:
+
+```dart
+final goldens = await renderScreenGoldenMatrix(
+  (locale, theme) => ProviderScope(
+    overrides: [studentIdValueProvider.overrideWithValue('test-student')],
+    child: const MyScreen(),
+  ),
+  locales: [const Locale('en'), const Locale('es')],
+  sizes: [const Size(375, 800), const Size(1200, 800)],
+  themeMode: ThemeMode.light,
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  pathBuilder: (locale, size, theme) =>
+      buildGoldenPath('my_screen', locale, size, theme),
+);
+for (final entry in goldens.entries) {
+  expectLater(entry.value, matchesGoldenFile(entry.key));
+}
+// → 4 goldens: my_screen_en_375_light.png … my_screen_es_1200_light.png
+```
 
 ### `renderScreenGoldenMatrixFull`
 
@@ -465,7 +521,8 @@ The `flutter_to_image` package wraps widgets in `Theme`, `MediaQuery`,
 `Tooltip` or `IconButton` need an `Overlay` ancestor, which `MaterialApp`
 provides internally.
 
-**Preferred — use `renderScreenGoldenMatrixFull`:** it builds a fresh
+**Preferred — use `renderScreenGoldenMatrix` (single theme) or
+`renderScreenGoldenMatrixFull` (light/dark):** each builds a fresh
 `MaterialApp` *per matrix cell*, so `OverlayEntry` is never reused and you
 avoid the "entry already present in a different Overlay" error. Pass a
 `screenBuilder` that returns the fully-wrapped screen (ProviderScope +
@@ -561,8 +618,9 @@ test/goldens/lesson_list_es_1200_dark.png
 
 Use `renderGoldenMatrix` to render all combinations in one call, or loop
 manually for full control over `textScale` and `pixelRatio`. For
-**screen-level** matrices, use `renderScreenGoldenMatrixFull` (which builds a
-fresh `MaterialApp` per cell); see [Wrappers for screens that need an
+**screen-level** matrices, use `renderScreenGoldenMatrix` (single theme) or
+`renderScreenGoldenMatrixFull` (light/dark) — both build a fresh `MaterialApp`
+per cell; see [Wrappers for screens that need an
 Overlay](#wrappers-for-screens-that-need-an-overlay).
 
 ### `buildGoldenPathWithTextScale`
@@ -669,8 +727,8 @@ expect(result.textDirection, TextDirection.rtl);
 
 ### Screen-level matrix helpers
 
-`renderScreenGoldenMatrixFull` and `renderScreenGoldenTextScaleSweep` both
-accept and forward `textDirection`:
+`renderScreenGoldenMatrix`, `renderScreenGoldenMatrixFull`, and
+`renderScreenGoldenTextScaleSweep` all accept and forward `textDirection`:
 
 ```dart
 final rtlGoldens = await renderScreenGoldenMatrixFull(

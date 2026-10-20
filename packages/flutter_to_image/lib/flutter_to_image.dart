@@ -4,8 +4,8 @@
 /// [renderScreenToPng], [renderWidgetToImageResult],
 /// [renderScreenToImageResult], [ImageResult], and the golden-matrix
 /// helpers [renderGoldenMatrix], [renderGoldenMatrixFull],
-/// [renderGoldenTextScaleSweep], [renderScreenGoldenMatrixFull], and
-/// [renderScreenGoldenTextScaleSweep].
+/// [renderGoldenTextScaleSweep], [renderScreenGoldenMatrix],
+/// [renderScreenGoldenMatrixFull], and [renderScreenGoldenTextScaleSweep].
 ///
 /// Also exports the visual-diff API: [compareImages], [ImageComparisonResult],
 /// and the disk-persistence helper [savePng] for attaching "expected vs actual
