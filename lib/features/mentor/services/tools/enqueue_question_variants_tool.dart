@@ -20,6 +20,7 @@ class EnqueueQuestionVariantsTool extends PrepTool {
   final QuestionVariantService _variantService;
   final QuestionRepository _questionRepo;
   final LlmTaskManager? _taskManager;
+  // ignore: unused_field
   final LlmUsageMeter? _usageMeter;
   final PrepBudgetService? _budgetService;
 

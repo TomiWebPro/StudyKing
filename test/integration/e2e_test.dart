@@ -130,6 +130,7 @@ class _IntegrationFakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     yield 'This is an integration test response about ${message.split(" ").last}.';
   }

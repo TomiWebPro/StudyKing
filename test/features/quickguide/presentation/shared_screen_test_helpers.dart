@@ -38,6 +38,7 @@ class FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     if (shouldThrow) throw Exception('Simulated LLM error');
     capturedSystemPrompt = systemPrompt;

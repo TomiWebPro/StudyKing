@@ -33,6 +33,7 @@ class _FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async =>
       Result.success(response);
 }

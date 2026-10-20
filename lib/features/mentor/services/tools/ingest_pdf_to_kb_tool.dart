@@ -21,6 +21,7 @@ class IngestPdfToKbTool extends PrepTool {
   final LlmService _llmService;
   final String _modelId;
   final LlmTaskManager? _taskManager;
+  // ignore: unused_field
   final LlmUsageMeter? _usageMeter;
   final PrepBudgetService? _budgetService;
 

@@ -334,6 +334,7 @@ class StubLessonAgentService implements LessonAgentService {
     required String topicTitle,
     String localeName = 'en',
     String feature = 'lesson_agent',
+    String? taskType,
   }) {
     return _generate(subjectId, topicId, topicTitle, localeName, feature);
   }
@@ -346,6 +347,7 @@ class StubLessonAgentService implements LessonAgentService {
     required String sourceContent,
     String localeName = 'en',
     String feature = 'lesson_agent',
+    String? taskType,
   }) async => null;
 }
 

@@ -27,6 +27,7 @@ class _FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     lastFeature = feature;
     if (forcedResult != null) return forcedResult!;

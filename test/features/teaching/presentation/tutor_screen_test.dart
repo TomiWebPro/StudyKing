@@ -51,6 +51,7 @@ class _FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     return Result.success('{"goals":["goal1"],"sections":[{"title":"intro","duration":10,"type":"explanation"}],"checkpoints":["cp1"],"estimatedDifficulty":2}');
   }
@@ -64,6 +65,7 @@ class _FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     yield 'Mock tutor response for: $message';
   }
@@ -87,6 +89,7 @@ class _SlowStreamLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     return Result.success('{"goals":["goal1"],"sections":[{"title":"intro","duration":10,"type":"explanation"}],"checkpoints":["cp1"],"estimatedDifficulty":2}');
   }
@@ -100,6 +103,7 @@ class _SlowStreamLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     yield 'partial tutor reply';
     await Future.delayed(const Duration(seconds: 2));
@@ -136,6 +140,7 @@ class _MidStreamFailureLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     return Result.success('{"goals":["goal1"],"sections":[{"title":"intro","duration":10,"type":"explanation"}],"checkpoints":["cp1"],"estimatedDifficulty":2}');
   }
@@ -149,6 +154,7 @@ class _MidStreamFailureLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     _streamCalls++;
     if (_streamCalls == 1) {

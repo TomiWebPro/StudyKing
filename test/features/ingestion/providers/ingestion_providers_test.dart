@@ -108,6 +108,7 @@ class _FailingLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     return Result.failure('LLM service failure');
   }
@@ -136,6 +137,7 @@ class _ModelCapturingLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     capturedModelIds.add(modelId);
     capturedFeatures.add(feature);

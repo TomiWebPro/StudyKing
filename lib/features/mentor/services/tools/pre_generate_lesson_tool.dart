@@ -17,6 +17,7 @@ class PreGenerateLessonTool extends PrepTool {
 
   final LessonAgentService _lessonAgentService;
   final LlmTaskManager? _taskManager;
+  // ignore: unused_field
   final LlmUsageMeter? _usageMeter;
   final PrepBudgetService? _budgetService;
 

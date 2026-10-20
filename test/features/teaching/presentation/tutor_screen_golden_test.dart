@@ -65,6 +65,7 @@ class _FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     return Result.success(
       '{"goals":["goal1"],"sections":[{"title":"intro","duration":10,"type":"explanation"}]}',
@@ -80,6 +81,7 @@ class _FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     yield 'Mock tutor response for: $message';
   }

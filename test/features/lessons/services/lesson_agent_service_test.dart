@@ -43,6 +43,7 @@ class _FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     lastFeature = feature;
     featureHistory.add(feature);

@@ -489,7 +489,9 @@ void main() {
       });
 
       test('proceeds for an enabled subject within the budget', () async {
-        fakeService.onGenerateLesson = ({
+        final meter = LlmUsageMeter();
+        final service = FakeLessonAgentServicePrep(meter: meter);
+        service.onGenerateLesson = ({
           required String subjectId,
           required String topicId,
           required String topicTitle,
@@ -504,13 +506,12 @@ void main() {
           );
         };
 
-        final meter = LlmUsageMeter();
         final budget = PrepBudgetService(
           meter: meter,
           budget: PrepBudget.defaults.copyWith(disabledSubjects: {'blocked'}),
         );
         final tool = PreGenerateLessonTool(
-          lessonAgentService: fakeService,
+          lessonAgentService: service,
           budgetService: budget,
           usageMeter: meter,
         );
@@ -522,6 +523,7 @@ void main() {
 
         expect(result['success'], isTrue);
         expect(result['lessonId'], 'lesson-123');
+        expect(service.lastTaskType, equals(PrepCategory.lessonPrep.taskTypeKey));
         // Prep actually ran and was metered under the lesson_prep bucket.
         expect(
           meter.getTotalTokensPerTaskType()['lesson_prep'],

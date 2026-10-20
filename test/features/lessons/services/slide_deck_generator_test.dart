@@ -41,6 +41,7 @@ class _FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     callCount++;
     lastFeature = feature;
@@ -154,6 +155,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success(jsonEncode({
@@ -225,6 +227,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success('[]');
@@ -275,6 +278,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success(jsonEncode({
@@ -329,6 +333,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success(jsonEncode({
@@ -373,6 +378,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success(jsonEncode({
@@ -416,6 +422,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success('[]');
@@ -450,6 +457,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success(jsonEncode({
@@ -504,6 +512,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success(jsonEncode({
@@ -550,6 +559,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success(jsonEncode({
@@ -592,6 +602,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success(jsonEncode({
@@ -634,6 +645,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success(jsonEncode({
@@ -686,6 +698,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success(jsonEncode({
@@ -726,6 +739,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success(jsonEncode([
@@ -763,6 +777,7 @@ void main() {
           ConversationMemory? memory,
           List<Map<String, String>>? history,
           String feature = 'general',
+          String? taskType,
         }) async {
           if (feature == 'slide_deck_structure') {
             return Result.success('not valid json');

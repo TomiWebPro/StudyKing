@@ -61,6 +61,7 @@ class FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     if (shouldThrowOnChat) return Result.failure('Simulated LLM chat error');
     if (message.contains('Summarize what was covered')) {
@@ -78,6 +79,7 @@ class FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     lastSystemPrompt = systemPrompt;
     lastFeature = feature;
@@ -209,6 +211,7 @@ class _ToolCallFakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     messageCalls.add(message);
     historyCalls.add(List<Map<String, String>>.from(history ?? []));

@@ -47,6 +47,7 @@ class FakeLessonAgentService extends LessonAgentService {
     required String topicTitle,
     String localeName = 'en',
     String feature = 'lesson_agent',
+    String? taskType,
   }) async {
     if (onGenerateLesson != null) {
       return onGenerateLesson!(

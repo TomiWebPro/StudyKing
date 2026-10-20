@@ -112,6 +112,7 @@ class FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     chatCalls++;
     if (_shouldThrowOnChat) throw Exception('LLM failure');
@@ -127,6 +128,7 @@ class FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     yield 'Tutor response';
   }

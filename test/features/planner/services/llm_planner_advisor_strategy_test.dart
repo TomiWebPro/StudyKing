@@ -23,6 +23,7 @@ class _FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     capturedMessage = message;
     if (_shouldThrow) throw Exception('llm error');

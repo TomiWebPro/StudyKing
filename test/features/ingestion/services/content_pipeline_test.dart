@@ -52,6 +52,7 @@ class FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     return Result.success(response);
   }
@@ -72,6 +73,7 @@ class ModelCapturingLlmService extends FakeLlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     capturedModelIds.add(modelId);
     capturedFeatures.add(feature);

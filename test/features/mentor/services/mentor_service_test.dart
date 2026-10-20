@@ -113,6 +113,7 @@ class FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     capturedMessage = message;
     capturedSystemPrompt = systemPrompt;

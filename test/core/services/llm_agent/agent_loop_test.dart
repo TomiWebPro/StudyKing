@@ -61,6 +61,7 @@ class _FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     messageCalls.add(message);
     historyCalls.add(List<Map<String, String>>.from(history ?? []));
@@ -95,6 +96,7 @@ class _TaskTrackingFakeLlmService extends _FakeLlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     messageCalls.add(message);
     historyCalls.add(List<Map<String, String>>.from(history ?? []));
@@ -143,6 +145,7 @@ class _StreamingFakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     messageCalls.add(message);
     historyCalls.add(List<Map<String, String>>.from(history ?? []));
@@ -181,6 +184,7 @@ class _TaskTrackingStreamingFakeLlmService extends _StreamingFakeLlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     messageCalls.add(message);
     historyCalls.add(List<Map<String, String>>.from(history ?? []));

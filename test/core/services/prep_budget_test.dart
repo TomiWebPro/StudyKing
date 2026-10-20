@@ -641,5 +641,63 @@ void main() {
       expect(service.totalPrepTokens() + service.totalLiveTokens(),
           meter.getTotalTokens());
     });
+
+    // Issue: prep-tool-doubles-count-tokens
+    //
+    // Double-counting bug: the three PrepTools (IngestPdfToKbTool,
+    // EnqueueQuestionVariantsTool, PreGenerateLessonTool) used to record
+    // *estimated* tokens on the LlmUsageMeter under their specific category
+    // key (e.g. 'pdf_ingestion'), while LlmService.chat(feature: 'pdf_ingestion')
+    // simultaneously recorded *actual* tokens under 'background' (via
+    // fromFeature). Since both keys are PrepCategory.taskTypeKeys,
+    // totalPrepTokens() counted both → inflation.
+    //
+    // Fix: PrepTools now pass taskType: prepCategory.taskTypeKey to chat(),
+    // so _recordCompletion uses the override instead of fromFeature.
+    // The estimated recording was removed. This test verifies the new
+    // behaviour: actual tokens are recorded once, under the specific
+    // category key, and totalPrepTokens() matches exactly.
+    test('actual prep tokens recorded under specific category key are not double-counted', () {
+      final meter = LlmUsageMeter();
+      // Simulates LlmService.chat(feature: 'pdf_ingestion', taskType: 'pdf_ingestion')
+      // → _recordCompletion uses the taskType override, not fromFeature('pdf_ingestion').
+      meter.recordUsage(
+        id: 'pdf_actual',
+        feature: 'pdf_ingestion',
+        modelId: 'gpt-4o',
+        inputTokens: 800,
+        outputTokens: 200,
+        taskType: 'pdf_ingestion', // explicit override, NOT 'background'
+      );
+      // A live tutoring call remains counted as live.
+      meter.recordUsage(
+        id: 'live_tutor',
+        feature: 'tutor',
+        modelId: 'gpt-4o',
+        inputTokens: 4000,
+        outputTokens: 2000,
+        taskType: 'teaching',
+      );
+
+      final service = PrepBudgetService(meter: meter);
+
+      // Only the actual pdf_ingestion tokens (1000) are counted — no
+      // estimated tokens double-counted, no actual leaked to 'background'.
+      expect(service.totalPrepTokens(), 1000);
+      expect(service.totalLiveTokens(), 6000);
+      // Partition holds: 1000 prep + 6000 live = 7000 total.
+      expect(service.totalPrepTokens() + service.totalLiveTokens(),
+          meter.getTotalTokens());
+
+      // Per-category spend reflects actuals, not estimates.
+      final spent = service.spendingByCategory();
+      expect(spent[PrepCategory.pdfIngestion], 1000);
+      expect(spent[PrepCategory.background], 0);
+
+      // The actual tokens are under the specific key, NOT 'background'.
+      final byType = meter.getTotalTokensPerTaskType();
+      expect(byType['pdf_ingestion'], 1000);
+      expect(byType['background'], isNull);
+    });
   });
 }
