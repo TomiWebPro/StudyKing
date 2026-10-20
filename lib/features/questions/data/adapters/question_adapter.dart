@@ -34,13 +34,16 @@ class QuestionAdapter extends TypeAdapter<Question> {
       nextReview: fields[18] as DateTime?,
       variantGroupId: fields[19] as String? ?? '',
       srDataJson: fields[20] as String?,
+      validationStatus: fields[21] == null
+          ? ValidationStatus.pending
+          : ValidationStatus.values[fields[21] as int],
     );
   }
 
   @override
   void write(BinaryWriter writer, Question obj) {
     writer
-      ..writeByte(21)
+      ..writeByte(22)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -82,7 +85,9 @@ class QuestionAdapter extends TypeAdapter<Question> {
       ..writeByte(19)
       ..write(obj.variantGroupId)
       ..writeByte(20)
-      ..write(obj.srDataJson);
+      ..write(obj.srDataJson)
+      ..writeByte(21)
+      ..write(obj.validationStatus.index);
   }
 
   @override

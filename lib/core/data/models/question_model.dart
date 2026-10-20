@@ -73,6 +73,13 @@ class Question extends HiveObject {
   /// Managed by [SpacedRepetitionEngine] — not a Hive field.
   final String? srDataJson;
 
+  /// Validation status for AI-generated questions (vision_next_term.md §4.3:
+  /// "every auto-created artefact is marked `ai-generated + validation status`
+  /// until human/validator approves"). Questions created by the ingestion
+  /// pipeline default to [ValidationStatus.pending] until manually approved.
+  @HiveField(21, defaultValue: ValidationStatus.pending)
+  final ValidationStatus validationStatus;
+
   Question({
     required this.id,
     required this.text,
@@ -95,6 +102,7 @@ class Question extends HiveObject {
     this.nextReview,
     this.variantGroupId = '',
     this.srDataJson,
+    this.validationStatus = ValidationStatus.pending,
   });
 
   Map<String, dynamic> toJson() => {
@@ -119,6 +127,7 @@ class Question extends HiveObject {
     'srDataJson': srDataJson,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
+    'validationStatus': validationStatus.index,
   };
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -167,7 +176,15 @@ class Question extends HiveObject {
       srDataJson: json['srDataJson'] as String?,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      validationStatus: _parseValidationStatus(json['validationStatus']),
     );
+  }
+
+  static ValidationStatus _parseValidationStatus(dynamic raw) {
+    if (raw is int && raw >= 0 && raw < ValidationStatus.values.length) {
+      return ValidationStatus.values[raw];
+    }
+    return ValidationStatus.pending;
   }
 
   Question copyWith({
@@ -193,6 +210,7 @@ class Question extends HiveObject {
     String? srDataJson,
     String? variantGroupId,
     bool clearSrData = false,
+    ValidationStatus? validationStatus,
   }) {
     return Question(
       id: id ?? this.id,
@@ -216,6 +234,7 @@ class Question extends HiveObject {
       srDataJson: clearSrData ? null : (srDataJson ?? this.srDataJson),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      validationStatus: validationStatus ?? this.validationStatus,
     );
   }
 }

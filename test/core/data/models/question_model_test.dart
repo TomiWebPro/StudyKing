@@ -752,6 +752,155 @@ void main() {
       });
     });
 
+    group('validationStatus', () {
+      test('defaults to pending for new questions', () {
+        final question = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          createdAt: now,
+          updatedAt: now,
+        );
+        expect(question.validationStatus, ValidationStatus.pending);
+      });
+
+      test('can be set to approved for manually created questions', () {
+        final question = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          createdAt: now,
+          updatedAt: now,
+          validationStatus: ValidationStatus.approved,
+        );
+        expect(question.validationStatus, ValidationStatus.approved);
+      });
+
+      test('toJson includes validationStatus index', () {
+        final question = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          createdAt: now,
+          updatedAt: now,
+          validationStatus: ValidationStatus.approved,
+        );
+        final json = question.toJson();
+        expect(json['validationStatus'], ValidationStatus.approved.index);
+      });
+
+      test('toJson writes pending for default', () {
+        final question = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          createdAt: now,
+          updatedAt: now,
+        );
+        final json = question.toJson();
+        expect(json['validationStatus'], ValidationStatus.pending.index);
+      });
+
+      test('fromJson parses validationStatus', () {
+        final json = {
+          'id': 'q-1',
+          'text': 'Text',
+          'type': 0,
+          'subjectId': 's1',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
+          'validationStatus': 1,
+        };
+        final question = Question.fromJson(json);
+        expect(question.validationStatus, ValidationStatus.approved);
+      });
+
+      test('fromJson defaults to pending when validationStatus is missing', () {
+        final json = {
+          'id': 'q-1',
+          'text': 'Text',
+          'type': 0,
+          'subjectId': 's1',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
+        };
+        final question = Question.fromJson(json);
+        expect(question.validationStatus, ValidationStatus.pending);
+      });
+
+      test('fromJson defaults to pending for out-of-range index', () {
+        final json = {
+          'id': 'q-1',
+          'text': 'Text',
+          'type': 0,
+          'subjectId': 's1',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
+          'validationStatus': 99,
+        };
+        final question = Question.fromJson(json);
+        expect(question.validationStatus, ValidationStatus.pending);
+      });
+
+      test('copyWith updates validationStatus', () {
+        final question = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          createdAt: now,
+          updatedAt: now,
+        );
+        final approved = question.copyWith(
+          validationStatus: ValidationStatus.approved,
+        );
+        expect(approved.validationStatus, ValidationStatus.approved);
+        expect(question.validationStatus, ValidationStatus.pending);
+      });
+
+      test('copyWith preserves validationStatus when not provided', () {
+        final question = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          createdAt: now,
+          updatedAt: now,
+          validationStatus: ValidationStatus.approved,
+        );
+        final copy = question.copyWith(text: 'New text');
+        expect(copy.validationStatus, ValidationStatus.approved);
+      });
+
+      test('serialization roundtrip preserves validationStatus', () {
+        final original = Question(
+          id: 'q-1',
+          text: 'Text',
+          type: QuestionType.singleChoice,
+          subjectId: 's1',
+          topicId: 't1',
+          createdAt: now,
+          updatedAt: now,
+          validationStatus: ValidationStatus.approved,
+        );
+        final restored = Question.fromJson(original.toJson());
+        expect(restored.validationStatus, ValidationStatus.approved);
+      });
+    });
+
     group('Hive type annotation', () {
       test('class name matches HiveType', () {
         const question = Question;

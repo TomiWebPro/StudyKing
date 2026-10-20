@@ -167,5 +167,46 @@ void main() {
       expect(restored.tags, isEmpty);
       await box.close();
     });
+
+    test('write/read round-trip preserves validationStatus approved', () async {
+      final box = await Hive.openBox<Question>('questions_val_approved');
+      final created = DateTime(2026, 5, 12);
+      final question = Question(
+        id: 'q5',
+        text: 'What is 2+2?',
+        type: QuestionType.singleChoice,
+        subjectId: 'sub5',
+        topicId: 'top5',
+        createdAt: created,
+        updatedAt: created,
+        validationStatus: ValidationStatus.approved,
+      );
+
+      await box.put('q5', question);
+      final restored = box.get('q5')!;
+
+      expect(restored.validationStatus, ValidationStatus.approved);
+      await box.close();
+    });
+
+    test('write/read round-trip defaults to pending when field absent', () async {
+      final box = await Hive.openBox<Question>('questions_val_default');
+      final created = DateTime(2026, 5, 12);
+      final question = Question(
+        id: 'q6',
+        text: 'Explain photosynthesis.',
+        type: QuestionType.essay,
+        subjectId: 'sub6',
+        topicId: 'top6',
+        createdAt: created,
+        updatedAt: created,
+      );
+
+      await box.put('q6', question);
+      final restored = box.get('q6')!;
+
+      expect(restored.validationStatus, ValidationStatus.pending);
+      await box.close();
+    });
   });
 }

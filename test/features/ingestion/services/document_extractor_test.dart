@@ -81,6 +81,41 @@ DocumentExtractor buildExtractor(OcrExtractionResult ocrResult) {
   );
 }
 
+class ConfigurableTranscriptionExtractor extends TranscriptionExtractor {
+  final TranscriptionResult resultToReturn;
+
+  ConfigurableTranscriptionExtractor(this.resultToReturn)
+      : super(modelId: 'm', localeName: 'en');
+
+  @override
+  Future<TranscriptionResult> transcribeVideo({
+    required String rawContent,
+    required String? sourceUrl,
+  }) async =>
+      resultToReturn;
+
+  @override
+  Future<TranscriptionResult> transcribeAudio({
+    required String rawContent,
+    required String? sourceUrl,
+  }) async =>
+      resultToReturn;
+}
+
+DocumentExtractor buildExtractorWithTranscription(
+  TranscriptionResult transcriptionResult,
+) {
+  return DocumentExtractor(
+    modelId: 'm',
+    localeName: 'en',
+    ocrExtractor: FakeOcrExtractor(
+      const OcrExtractionResult(text: '', extractionMethod: 'x'),
+    ),
+    pdfExtractor: FakePdfExtractor(),
+    transcriptionExtractor: ConfigurableTranscriptionExtractor(transcriptionResult),
+  );
+}
+
 void main() {
   group('DocumentExtractor.extractText', () {
     test('returns direct text for lecture notes', () async {
@@ -430,6 +465,179 @@ void main() {
 
       final lines = text.split('\n').where((l) => l.trim().isNotEmpty).toList();
       expect(lines, ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']);
+    });
+  });
+
+  // --- media URL / content-trust invariant (issue: ingestion-media-url-stored-as-content) ---
+  // No path may return a bare URL/path as `text`. When real content cannot be
+  // recovered from video/audio/web/lecture-notes inputs, the result must be an
+  // explicit error with empty text so the pipeline halts instead of feeding a
+  // URL string to downstream LLM stages.
+  group('DocumentExtractor media URL inputs never stored as content', () {
+    test('returns error for lecture notes with bare URL', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final result = await extractor.extractText(
+        rawContent: 'https://example.com/lecture-notes',
+        sourceType: SourceType.lectureNotes,
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'web_no_content');
+      expect(result.errorMessage, isNotNull);
+    });
+
+    test('returns error for external resource with bare URL', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final result = await extractor.extractText(
+        rawContent: 'http://example.com/resource',
+        sourceType: SourceType.externalResource,
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'web_no_content');
+      expect(result.errorMessage, isNotNull);
+    });
+
+    test('returns error for web page with bare URL', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final result = await extractor.extractText(
+        rawContent: 'https://example.com/article',
+        sourceType: SourceType.webPage,
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'web_no_content');
+      expect(result.errorMessage, isNotNull);
+    });
+
+    test('returns error for YouTube video URL', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final result = await extractor.extractText(
+        rawContent: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        sourceType: SourceType.video,
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'youtube_transcript_missing');
+      expect(result.errorMessage, isNotNull);
+    });
+
+    test('returns error for non-YouTube video URL', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final result = await extractor.extractText(
+        rawContent: 'https://example.com/video.mp4',
+        sourceType: SourceType.video,
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'video_transcript_missing');
+      expect(result.errorMessage, isNotNull);
+    });
+
+    test('returns error for non-URL video input without transcript', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final result = await extractor.extractText(
+        rawContent: 'file:///path/to/video.mp4',
+        sourceType: SourceType.video,
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'video_no_content');
+      expect(result.errorMessage, isNotNull);
+    });
+
+    test('returns error for audio URL', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final result = await extractor.extractText(
+        rawContent: 'https://example.com/audio.mp3',
+        sourceType: SourceType.audio,
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'audio_transcript_missing');
+      expect(result.errorMessage, isNotNull);
+    });
+
+    test('returns error for non-URL audio input without transcript', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final result = await extractor.extractText(
+        rawContent: 'file:///path/to/audio.mp3',
+        sourceType: SourceType.audio,
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'audio_no_content');
+      expect(result.errorMessage, isNotNull);
+    });
+
+    test('propagates transcription error instead of falling back to URL', () async {
+      final extractor = buildExtractorWithTranscription(
+        const TranscriptionResult(
+          text: '',
+          extractionMethod: 'transcription_llm_failed',
+          errorMessage: 'transcription failed',
+        ),
+      );
+
+      final result = await extractor.extractText(
+        rawContent: 'https://example.com/video.mp4',
+        sourceType: SourceType.video,
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'transcription_llm_failed');
+      expect(result.errorMessage, 'transcription failed');
+    });
+
+    test('uses transcription text when available, ignoring URL format', () async {
+      final extractor = buildExtractorWithTranscription(
+        const TranscriptionResult(
+          text: 'Real transcript content from the video',
+          extractionMethod: 'transcribed_llm',
+        ),
+      );
+
+      final result = await extractor.extractText(
+        rawContent: 'https://example.com/video.mp4',
+        sourceType: SourceType.video,
+      );
+
+      expect(result.isError, isFalse);
+      expect(result.text, 'Real transcript content from the video');
+      expect(result.extractionMethod, 'transcribed_llm');
     });
   });
 }

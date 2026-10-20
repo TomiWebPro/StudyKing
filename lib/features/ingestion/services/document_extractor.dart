@@ -93,7 +93,18 @@ class DocumentExtractor {
         break;
       case SourceType.lectureNotes:
       case SourceType.externalResource:
-        result = ExtractionResult(text: rawContent, extractionMethod: 'direct');
+        // A bare URL is not readable content: the student must scrape it first
+        // (or paste real text). Never persist a URL string as `extractedText`
+        // so downstream LLM stages never run on a URL as if it were material.
+        result = _looksLikeUrl(rawContent)
+            ? ExtractionResult(
+                text: '',
+                extractionMethod: 'web_no_content',
+                errorMessage: 'This web URL could not be scraped for readable '
+                    'content. Fetch the page text first or paste the material '
+                    'directly.',
+              )
+            : ExtractionResult(text: rawContent, extractionMethod: 'direct');
         break;
       case SourceType.webPage:
         result = _extractWebPage(rawContent, sourceUrl);
@@ -134,6 +145,14 @@ class DocumentExtractor {
       truncationNote: 'Content truncated to $maxCharsPerSource characters '
           '(source exceeds token ceiling). Some material may be missing.',
     );
+  }
+
+  /// True when [value] is a bare, scannable URL (no surrounding prose).
+  /// Such values are never readable content and must never be persisted as
+  /// `extractedText` (Vision Next-Term §3.1 content grounding).
+  static bool _looksLikeUrl(String value) {
+    final v = value.trim();
+    return v.startsWith('http://') || v.startsWith('https://');
   }
 
   Future<ExtractionResult> _extractPdfOrDocument(
@@ -274,6 +293,17 @@ class DocumentExtractor {
         extractionMethod: 'html_stripped',
       );
     }
+    // A bare URL is not readable content. The upload screen must scrape it
+    // first (Fetch) or the student must paste the material directly. Never
+    // persist the URL string as `extractedText`.
+    if (_looksLikeUrl(rawContent)) {
+      return ExtractionResult(
+        text: '',
+        extractionMethod: 'web_no_content',
+        errorMessage: 'This web URL could not be scraped for readable content. '
+            'Fetch the page text first or paste the material directly.',
+      );
+    }
     return ExtractionResult(text: rawContent, extractionMethod: 'web_direct');
   }
 
@@ -302,20 +332,18 @@ class DocumentExtractor {
       );
     }
 
-    if (rawContent.startsWith('file://')) {
-      return ExtractionResult(
-        text: rawContent,
-        extractionMethod: 'image_file',
-        mimeType: _detectMimeType(rawContent.substring(7)),
-      );
-    }
-    if (rawContent.startsWith('http://') || rawContent.startsWith('https://')) {
-      return ExtractionResult(
-        text: rawContent,
-        extractionMethod: 'image_url',
-      );
-    }
-    return ExtractionResult(text: rawContent, extractionMethod: 'image_raw');
+    // OCR produced no text (and no explicit error): no readable text layer.
+    // Never persist the raw file path/URL as `extractedText` — surface an
+    // explicit failure so the pipeline halts with a student-readable reason.
+    return ExtractionResult(
+      text: '',
+      extractionMethod: 'image_unavailable',
+      errorMessage: 'No text could be read from this image. Use a clearer '
+          'photo/scan or a document with a text layer.',
+      mimeType: rawContent.startsWith('file://')
+          ? _detectMimeType(rawContent.substring(7))
+          : null,
+    );
   }
 
   Future<ExtractionResult> _extractVideo(
@@ -339,21 +367,39 @@ class DocumentExtractor {
       );
     }
 
+    if (result.isError) {
+      return ExtractionResult(
+        text: '',
+        extractionMethod: result.extractionMethod,
+        errorMessage: result.errorMessage ?? 'Transcription failed',
+        durationSeconds: result.durationSeconds,
+      );
+    }
     final effectiveUrl = sourceUrl ?? rawContent;
     if (effectiveUrl.contains('youtube.com') || effectiveUrl.contains('youtu.be')) {
       return ExtractionResult(
-        text: rawContent,
-        extractionMethod: 'youtube_url',
+        text: '',
+        extractionMethod: 'youtube_transcript_missing',
+        errorMessage: 'No YouTube transcript was available and no offline ASR '
+            'engine is configured. Add an ASR key, upload captions, or paste '
+            'the transcript.',
         durationSeconds: null,
       );
     }
     if (effectiveUrl.startsWith('http://') || effectiveUrl.startsWith('https://')) {
       return ExtractionResult(
-        text: rawContent,
-        extractionMethod: 'video_url',
+        text: '',
+        extractionMethod: 'video_transcript_missing',
+        errorMessage: 'No transcript could be extracted from this video URL. '
+            'Transcribe the audio locally or provide a captions URL.',
+        durationSeconds: null,
       );
     }
-    return ExtractionResult(text: rawContent, extractionMethod: 'video_raw');
+    return ExtractionResult(
+      text: '',
+      extractionMethod: 'video_no_content',
+      errorMessage: 'No transcriptable content was found for this video input.',
+    );
   }
 
   Future<ExtractionResult> _extractAudio(
@@ -377,14 +423,28 @@ class DocumentExtractor {
       );
     }
 
+    if (result.isError) {
+      return ExtractionResult(
+        text: '',
+        extractionMethod: result.extractionMethod,
+        errorMessage: result.errorMessage ?? 'Transcription failed',
+        durationSeconds: result.durationSeconds,
+      );
+    }
     final effectiveUrl = sourceUrl ?? rawContent;
     if (effectiveUrl.startsWith('http://') || effectiveUrl.startsWith('https://')) {
       return ExtractionResult(
-        text: rawContent,
-        extractionMethod: 'audio_url',
+        text: '',
+        extractionMethod: 'audio_transcript_missing',
+        errorMessage: 'No transcript could be extracted from this audio URL. '
+            'Transcribe the audio locally or provide a captions URL.',
       );
     }
-    return ExtractionResult(text: rawContent, extractionMethod: 'audio_raw');
+    return ExtractionResult(
+      text: '',
+      extractionMethod: 'audio_no_content',
+      errorMessage: 'No transcriptable content was found for this audio input.',
+    );
   }
 
   List<SourceChunk> _chunkContent(String text) {

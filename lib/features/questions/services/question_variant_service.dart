@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/id_generator.dart';
@@ -238,6 +239,9 @@ class QuestionVariantService {
       explanation: explanation.isNotEmpty ? explanation : source.explanation,
       createdAt: now,
       updatedAt: now,
+      // AI-generated variant: mark as unvalidated until reviewed
+      // (vision_next_term.md §4.3).
+      validationStatus: ValidationStatus.pending,
     );
   }
 }

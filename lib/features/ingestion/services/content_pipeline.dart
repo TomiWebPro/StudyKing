@@ -254,6 +254,39 @@ class ContentPipeline {
         sourceType: type,
         sourceUrl: sourceUrl,
       );
+
+      // Vision integrity (agent_must_read.md §9, Vision Next-Term §3.1): never
+      // persist a raw URL/path as `extractedText`. When extraction could not
+      // recover real material (e.g. transcript missing, OCR unavailable for an
+      // image/audio/video URL), the ExtractionResult is an error. Halt the
+      // pipeline there and surface a student-readable failure instead of letting
+      // the classification/summarisation/question stages run on a URL string as
+      // if it were the student's material.
+      if (extractionResult.isError) {
+        final failed = updated.copyWith(
+          processingStatus: ProcessingStatus.failed.name,
+          extractionMethod: extractionResult.extractionMethod,
+          extractedText: '',
+          chunks: '',
+          extractionMeta: jsonEncode(extractionResult.toMetaJson()),
+          errorMessage: extractionResult.errorMessage ?? 'Extraction failed',
+        );
+        final failedSave = await _saveSource(failed);
+        if (failedSave.isFailure) {
+          _logger.w(
+            'Failed to persist failed source ${source.id}',
+            failedSave.error,
+          );
+        }
+        _logger.w(
+          'Extraction failed for source ${source.id}: '
+          '${extractionResult.errorMessage}',
+        );
+        return Result.failure(
+          userFriendlyError(extractionResult.errorMessage ?? 'Extraction failed'),
+        );
+      }
+
       updated = updated.copyWith(
         extractedText: extractionResult.text,
         extractionMethod: extractionResult.extractionMethod,
@@ -723,6 +756,10 @@ class ContentPipeline {
           ),
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
+          // AI-generated artefacts must be marked as unvalidated until a
+          // human/validator reviews them (vision_next_term.md §4.3;
+          // agent_must_read.md §9: content must not be blindly trusted).
+          validationStatus: ValidationStatus.pending,
         );
         final result = await _questionRepository.create(question);
         if (result.isSuccess) {
@@ -1003,6 +1040,10 @@ class ContentPipeline {
           ),
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
+          // AI-generated artefacts must be marked as unvalidated until a
+          // human/validator reviews them (vision_next_term.md §4.3;
+          // agent_must_read.md §9: content must not be blindly trusted).
+          validationStatus: ValidationStatus.pending,
         );
         final result = await _questionRepository.create(question);
         if (result.isSuccess) {

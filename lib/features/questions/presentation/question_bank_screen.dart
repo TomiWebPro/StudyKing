@@ -940,6 +940,8 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
             : null,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        // Manually created by the student — trusted immediately.
+        validationStatus: ValidationStatus.approved,
       );
 
       final saveResult = await _questionRepo.create(question);

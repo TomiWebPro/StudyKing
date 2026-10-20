@@ -955,6 +955,59 @@ void main() {
         hasLength(ChunkedContentProcessor.maxQuestionsPerChunk),
       );
     });
+
+    test('marks AI-generated questions as pending validation', () async {
+      // Vision Next-Term §4.3 / agent_must_read.md §9: every auto-created
+      // artefact must carry a validation status until a human/validator
+      // approves it. Questions born from the ingestion pipeline are
+      // AI-generated and must default to ValidationStatus.pending so they
+      // are never blindly trusted.
+      final questionRepo = CountingQuestionRepository();
+      final pipeline = ContentPipeline(
+        llmService: FakeLlmService(_questionBankJson(10)),
+        sourceRepository: FakeSourceRepository(),
+        topicRepository: FakeTopicRepository([]),
+        questionRepository: questionRepo,
+        documentExtractor: FakeDocumentExtractor(ExtractionResult(
+          text: 'dense page content',
+          extractionMethod: 'pdf_text_direct',
+        )),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+        chunkedProcessor: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        transcriptionModelId: 'm',
+        localeName: 'en',
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'dense page content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
+        generateQuestions: true,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(questionRepo.createdQuestions, isNotEmpty);
+      // Gate assertion: every AI-generated question must be pending.
+      expect(
+        questionRepo.createdQuestions.every(
+          (q) => q.validationStatus == ValidationStatus.pending,
+        ),
+        isTrue,
+        reason: 'AI-generated questions must be marked ValidationStatus.pending '
+            'until manually approved',
+      );
+    });
   });
 
   group('ContentPipeline topic auto-creation failures', () {
@@ -1302,6 +1355,113 @@ void main() {
       expect(stored, isNotNull);
       expect(stored!.processingStatus, ProcessingStatus.failed.name);
       expect(stored.errorMessage, l10n.pipelineErrorTimeout);
+    });
+  });
+
+  // --- extraction-error bail (issue: ingestion-media-url-stored-as-content) ---
+  // When the extractor returns an error result (e.g. a bare URL that cannot be
+  // scraped, or a missing transcript), the pipeline must halt before any
+  // classify/summarize/question LLM stage runs, mark the source as failed, and
+  // persist an empty `extractedText` so no URL is ever stored as content.
+  group('ContentPipeline extraction error bails before LLM stages', () {
+    test('returns failure, marks source failed, and skips LLM stages', () async {
+      final errorResult = ExtractionResult(
+        text: '',
+        extractionMethod: 'web_no_content',
+        errorMessage: 'This web URL could not be scraped for readable content.',
+      );
+      final docExtractor = FakeDocumentExtractor(errorResult);
+      final chunked = FakeChunkedContentProcessor(
+        ClassificationResult(topicId: '', confidence: 0),
+      );
+      final sourceRepo = FakeSourceRepository();
+      final pipeline = buildPipeline(
+        docExtractor: docExtractor,
+        chunked: chunked,
+        sourceRepo: sourceRepo,
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'https://example.com/article',
+        type: SourceType.webPage,
+        studentId: 's1',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
+        possibleTopics: ['Biology'],
+        generateQuestions: true,
+        generateLessons: true,
+        generateSlideDecks: true,
+        generateFlashcards: true,
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('could not be scraped'));
+      // The URL must never be persisted as extractedText.
+      final stored = sourceRepo.getStored(sourceRepo.lastCreatedId!);
+      expect(stored, isNotNull);
+      expect(stored!.processingStatus, ProcessingStatus.failed.name);
+      expect(stored.extractedText, isEmpty);
+      // No downstream LLM stages should have been invoked.
+      expect(chunked.classifyCalled, isFalse);
+      expect(chunked.summarizeCalled, isFalse);
+      expect(docExtractor.extractTextCalled, isTrue);
+    });
+
+    test('halts and persists youtube_transcript_missing without LLM calls',
+        () async {
+      final errorResult = ExtractionResult(
+        text: '',
+        extractionMethod: 'youtube_transcript_missing',
+        errorMessage: 'No YouTube transcript was available',
+      );
+      final docExtractor = FakeDocumentExtractor(errorResult);
+      final chunked = FakeChunkedContentProcessor(
+        ClassificationResult(topicId: '', confidence: 0),
+      );
+      final sourceRepo = FakeSourceRepository();
+      final pipeline = buildPipeline(
+        docExtractor: docExtractor,
+        chunked: chunked,
+        sourceRepo: sourceRepo,
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        type: SourceType.video,
+        studentId: 's1',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
+        possibleTopics: ['Biology'],
+        generateQuestions: true,
+      );
+
+      expect(result.isFailure, isTrue);
+      final stored = sourceRepo.getStored(sourceRepo.lastCreatedId!);
+      expect(stored, isNotNull);
+      expect(stored!.processingStatus, ProcessingStatus.failed.name);
+      expect(stored.extractedText, isEmpty);
+      expect(stored.extractionMethod, 'youtube_transcript_missing');
+      // No LLM stages should have run.
+      expect(chunked.classifyCalled, isFalse);
+      expect(chunked.summarizeCalled, isFalse);
     });
   });
 }
