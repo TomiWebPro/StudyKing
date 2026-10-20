@@ -44,13 +44,69 @@ import 'package:studyking/features/mentor/services/tools/read_source_content_too
 import 'package:studyking/features/mentor/services/tools/revisit_sources_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_sources_tool.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/features/mentor/services/mentor_context_builder.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/features/teaching/services/conversation_phase.dart';
+import 'package:studyking/features/teaching/services/prompts/prompts.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/hive_init_helper.dart';
 import '../../features/mentor/services/tools/test_helpers.dart' as tool_fakes;
 import 'fakes.dart';
+
+/// Builds a real mentor context prompt using [MentorContextBuilder] with
+/// hand-written fakes and an [LlmConfiguration] that injects provider status.
+///
+/// This replaces hardcoded `'You are a helpful academic mentor.'` strings that
+/// produced false FAIL verdicts — the real builder at
+/// `mentor_context_builder.dart:358-366` DOES inject provider config via
+/// `_buildProviderStatusLine()` when `_llmConfig` is non-null.
+///
+/// The config uses OpenRouter as primary with an Ollama backup (backupApiKey
+/// is non-empty so `hasBackup` returns true), so the provider line reads:
+/// `"LLM provider: OpenRouter. Backup: Ollama configured."`
+Future<String> buildMentorContextWithProviderConfig() async {
+  final l10n = lookupAppLocalizations(const Locale('en'));
+  final builder = MentorContextBuilder(
+    progressTracker: StudyProgressTracker(
+      attemptRepo: FakeAttemptRepository(),
+      sessionRepo: FakeSessionRepository(),
+      l10n: l10n,
+    ),
+    masteryService: tool_fakes.FakeMasteryGraphService(),
+    plannerService: tool_fakes.FakePlannerService(),
+    sessionRepository: tool_fakes.FakeSessionRepository(),
+    localeName: 'en',
+    llmConfig: const LlmConfiguration(
+      provider: LlmProvider.openRouter,
+      apiKey: 'test-key-for-scenario',
+      backupProvider: LlmProvider.ollama,
+      backupApiKey: 'ollama-backup-key',
+    ),
+  );
+  final result = await builder.buildContextPrompt();
+  return result.isSuccess ? (result.data ?? '') : '';
+}
+
+/// Renders the real teaching-mode system prompt via
+/// [ConversationPromptSet.tutorMessage] with `confusionCount >= 2`, so the
+/// confusion-detection directive is injected (prompts.dart:89-92).
+///
+/// This replaces hardcoded simplified prompt strings that produced false FAIL
+/// verdicts on the confusion-detection audit.
+String buildTeachingSystemPromptWithConfusion() {
+  const promptSet = ConversationPromptSet(localeName: 'en');
+  final entry = promptSet.tutorMessage(
+    subjectId: 'Fractions',
+    topicTitle: 'Fractions',
+    adaptivePace: 1.0,
+    phase: ConversationPhase.teaching,
+    confusionCount: 2,
+  );
+  return entry.systemPrompt;
+}
 
 /// Minimal hand-written fake [SourceRepository] for the ingestion scenario
 /// trace — AGENTS.md (no mockito/mocktail).
@@ -79,25 +135,23 @@ void main() {
   });
 
   group('Dry-run scenario: confused student (fractions)', () {
-    /// Simulates the teaching-mode system prompt as it currently exists
-    /// (no confusion-detection directive, no modality options). This is
-    /// read from prompts.dart behaviour — the system prompt only injects
-    /// optional learning-style hints when LearningPreference is set and
-    /// optional feedbackContext. There is no "if confused, escalate" clause.
-    const String currentTeachingSystemPrompt =
-        'You are a helpful tutor teaching fractions. '
-        'Explain concepts clearly and answer questions.';
+    /// Builds the real teaching-mode system prompt using ConversationPromptSet
+    /// with confusionCount >= 2, so the confusion-detection directive IS
+    /// injected (prompts.dart:89-92 — _buildConfusionDirective). This replaces
+    /// the previously hardcoded simplified prompt that produced a false FAIL
+    /// verdict (see issues/open/scenario-validation-hardcoded-prompts-false-verdicts.md).
+    final String currentTeachingSystemPrompt =
+        buildTeachingSystemPromptWithConfusion();
 
-    test('Step 1: no confusion-detection directive in system prompt', () {
-      // The system prompt is what AgentLoop feeds to the LLM.
-      // Per issues/open/e2e-teaching-missing-context-injection.md:
-      // prompts.dart buildTutorPrompt (lines 70-89) injects
-      // feedbackContext and _buildLearningStyleHint but has no
-      // confusion-detection directive. _consecutiveIncorrect (line 63)
-      // is tracked but never referenced in prompt construction.
-      expect(currentTeachingSystemPrompt.contains('confusion'), isFalse);
-      expect(currentTeachingSystemPrompt.contains('escalat'), isFalse);
-      expect(currentTeachingSystemPrompt.contains('different'), isFalse);
+    test('Step 1: confusion-detection directive IS injected when confusionCount >= 2', () {
+      // The real ConversationPromptSet.tutorMessage() injects
+      // _buildConfusionDirective when confusionCount >= 2 (prompts.dart:89-92).
+      // The directive text includes "confusion", "modality"
+      // (Switch explanation modality), and "prerequisite"
+      // (suggest a brief practice session on the prerequisite concept).
+      expect(currentTeachingSystemPrompt.contains('confusion'), isTrue);
+      expect(currentTeachingSystemPrompt.contains('modality'), isTrue);
+      expect(currentTeachingSystemPrompt.contains('prerequisite'), isTrue);
     });
 
     test('Step 2: no explanation-modality variation mechanism', () {
@@ -170,27 +224,30 @@ void main() {
         expect(r3.toolCalls, isEmpty);
 
         // Trace verdict: FAIL — the system does not escalate on repeated
-        // confusion because there is no confusion-detection directive
-        // and no escalation tool.
+        // confusion. The confusion directive IS present in the prompt
+        // (prompts.dart:89-92) and the suggest_practice tool IS registered,
+        // but teaching mode bypasses AgentLoop and the fake LLM ignores
+        // the directive, so no escalation occurs.
         // See: dry-run-test/scenario_confused_student_fractions.md Step 3
         // Status: FAIL
       },
     );
 
-    test('Tool/context audit: explanation-variation tools now registered',
+    test('Tool/context audit: explanation-variation tools and modalities now available',
         () async {
       // Reproduces the audit from dry-run-test/scenario_confused_student_fractions.md
-      // Tool/context audit section. Now that explain_differently and
-      // suggest_practice are registered in llmAgentToolsProvider, both are HAD.
+      // Tool/context audit section. With the real tutorMessage() called at
+      // confusionCount >= 2, the confusion directive IS injected and includes
+      // "modality", "analogy", "visual", and "step-by-step" guidance.
+      // The ExplainDifferentlyTool and SuggestPracticeTool are also registered.
 
       final neededTools = <String>[
         'explain_differently', // Repeat-explanation tool
         'suggest_practice', // Escalation to prerequisite practice
       ];
 
-      // The canonical tool set from fakes.dart → registeredToolNames mirrors
-      // llmAgentToolsProvider, so adding a tool to the provider automatically
-      // extends this audit.
+      // availableTools reflects the real llmAgentToolsProvider tool set
+      // (single source of truth in fakes.dart → registeredToolNames).
       final availableTools = registeredToolNames;
 
       final audit = AgentRunCapture.auditTools(
@@ -207,16 +264,15 @@ void main() {
       // - Conversation history (prior failed explanations): YES (via ConversationMemory)
       // - Student's prerequisite mastery gaps: YES (partial — readiness scorer
       //   not invoked during teaching)
-      // The teaching system prompt still does NOT include modality options
-      // (visual, analogy, step-by-step) — that gap is tracked separately by
-      // e2e-teaching-missing-context-injection.md.
+      // The confusion directive (injected at confusionCount >= 2) now includes
+      // modality options: "visual", "analogy", "step-by-step".
       final promptHasModalityOptions =
           currentTeachingSystemPrompt.contains('visual') ||
               currentTeachingSystemPrompt.contains('analogy') ||
               currentTeachingSystemPrompt.contains('step-by-step');
-      expect(promptHasModalityOptions, isFalse,
-          reason: 'No explanation-modality options in teaching system prompt '
-              '(tracked by e2e-teaching-missing-context-injection.md)');
+      expect(promptHasModalityOptions, isTrue,
+          reason: 'Confusion directive injects modality options when confusionCount >= 2 '
+              '(prompts.dart:89-92, _buildConfusionDirective)');
     });
 
     test('Verdict trace: confused-student scenario produces FAIL trace', () {
@@ -256,8 +312,9 @@ void main() {
          allPass = false;
        }
 
-      // Step 3: escalation tool now registered — but teaching system prompt
-      // doesn't invoke it (teaching mode bypasses AgentLoop).
+      // Step 3: escalation tool now registered — confusion directive IS present
+      // (prompts.dart:89-92) but teaching mode bypasses AgentLoop, so the
+      // directive is never acted upon via tools.
       final escalationTools = ['suggest_practice', 'ask_working', 'switch_mode'];
       final hasEscalationTool = registeredToolNames.contains('suggest_practice');
       final hasEscalationInPrompt = escalationTools
@@ -755,17 +812,19 @@ void main() {
       // → PARTIAL (guidance exists but is not syllabus-specific)
     });
 
-    test('Tool/context audit: provider config NOT in mentor context', () {
-      // Reproduces the audit from
-      // dry-run-test/scenario_api_key_missing.md (context audit).
-      // The mentor context builder does NOT query LlmConfiguration /
-      // provider settings, so the LLM cannot advise on provider status.
-      const mentorPrompt = 'You are a helpful academic mentor.';
-      expect(mentorPrompt.contains('OpenRouter'), isFalse);
-      expect(mentorPrompt.contains('backup'), isFalse);
-      expect(mentorPrompt.contains('Ollama'), isFalse);
-      expect(mentorPrompt.contains('provider'), isFalse);
-      expect(mentorPrompt.contains('offline'), isFalse);
+    test('Tool/context audit: provider config IS injected into mentor context', () async {
+      // Uses the real MentorContextBuilder.buildContextPrompt() with an
+      // LlmConfiguration to verify provider status IS injected
+      // (mentor_context_builder.dart:358-366, _buildProviderStatusLine at 658-666).
+      // The previously hardcoded 'You are a helpful academic mentor.' string
+      // produced a false FAIL — the real builder injects:
+      //   "LLM provider: OpenRouter. Backup: Ollama configured."
+      final mentorContext = await buildMentorContextWithProviderConfig();
+      expect(mentorContext, isNotEmpty);
+      expect(mentorContext.contains('OpenRouter'), isTrue);
+      expect(mentorContext.contains('Ollama'), isTrue);
+      expect(mentorContext.contains('provider'), isTrue);
+      expect(mentorContext.contains('Backup'), isTrue);
     });
 
     test('Verdict trace: api-key-missing scenario produces trace', () {
@@ -1214,18 +1273,16 @@ void main() {
   });
 
   group('Dry-run scenario: teacher feedback loop', () {
-    test('Step 1: no confusion-detection directive in teaching system prompt → FAIL',
+    test('Step 1: confusion-detection directive IS injected via tutorMessage(confusionCount >= 2) → PASS',
         () {
-      // Reproduces the check from scenario_confused_student_fractions.md Step 1.
-      // The teaching prompt (prompts.dart) does not include confusion-detection.
-      // Teaching mode calls LlmService.chatStream() directly, not AgentLoop,
-      // so no tools are available to vary explanation style.
-      const currentTeachingSystemPrompt =
-          'You are a helpful tutor teaching fractions. '
-          'Explain concepts clearly and answer questions.';
+      // Uses the real ConversationPromptSet.tutorMessage() with confusionCount=2,
+      // which injects the confusion directive (prompts.dart:89-92).
+      final currentTeachingSystemPrompt =
+          buildTeachingSystemPromptWithConfusion();
 
-      expect(currentTeachingSystemPrompt.contains('confusion'), isFalse);
-      expect(currentTeachingSystemPrompt.contains('escalat'), isFalse);
+      expect(currentTeachingSystemPrompt.contains('confusion'), isTrue);
+      expect(currentTeachingSystemPrompt.contains('modality'), isTrue);
+      expect(currentTeachingSystemPrompt.contains('prerequisite'), isTrue);
     });
 
     test('Step 2: explanation-modality variation mechanism is now available → PASS', () {
@@ -1267,7 +1324,7 @@ void main() {
     test('Verdict trace: teacher-feedback-loop scenario produces PARTIAL trace', () {
       final trace = <String>[];
 
-      trace.add('Step 1: PARTIAL — pacing feedback not explicitly handled in teaching prompt');
+      trace.add('Step 1: PASS — confusion-detection directive IS injected via tutorMessage(confusionCount >= 2) (prompts.dart:89-92)');
       trace.add('Step 2: PASS — explanation-style variation now available (explain_differently tool + LessonBlockType.visual/analogy)');
       trace.add('Step 3: FAIL — teaching mode does not invoke readiness scoring');
       trace.add('Step 4: PARTIAL — mastery stats exist but not surfaced post-lesson');
@@ -1438,25 +1495,37 @@ void main() {
       expect(registeredToolNames, contains('pre_generate_lesson'));
     });
 
-    test('Step 5: large PDF upload has no device-aware ceiling', () {
-      // Reproduces the tool/context audit from scenario Step 5.
-      // No agent tool checks file size against device constraints.
-      // ingest_pdf_to_kb_tool.dart exists but does not consult
-      // SystemMonitorService for device awareness.
-      final neededTools = <String>['check_file_size'];
+    test('Step 5: large PDF upload — device-aware ceiling gap, not a missing tool',
+        () {
+      // The fabricated 'check_file_size' tool never existed in the vision or
+      // codebase. The real ingestion tool is 'ingest_pdf_to_kb' (which IS
+      // registered and traced). The file-size token-ceiling gap was tracked
+      // by the now-closed issue ingestion-file-size-token-ceiling-missing.md.
+      // Audit the real tools instead.
+      expect(registeredToolNames, contains('ingest_pdf_to_kb'));
+
+      final neededTools = <String>['ingest_pdf_to_kb'];
       final audit = AgentRunCapture.auditTools(
         needed: neededTools,
         available: registeredToolNames,
       );
-      expect(audit, contains('check_file_size -> MISSING'));
+      expect(audit, contains('ingest_pdf_to_kb -> HAD'));
+      expect(audit, contains('all needed tools available'));
     });
 
-    test('Tool/context audit: provider config NOT in mentor context', () {
-      // Reproduces the context audit from scenario.
-      // Mentor context builder does NOT inject provider configuration.
-      const mentorPrompt = 'You are a helpful academic mentor.';
-      expect(mentorPrompt.contains('Ollama'), isFalse);
-      expect(mentorPrompt.contains('provider'), isFalse);
+    test('Tool/context audit: provider config IS injected into mentor context',
+        () async {
+      // Uses the real MentorContextBuilder.buildContextPrompt() with an
+      // LlmConfiguration to verify provider status IS injected
+      // (mentor_context_builder.dart:358-366, _buildProviderStatusLine at 658-666).
+      // The previously hardcoded 'You are a helpful academic mentor.' string
+      // produced a false FAIL — the real builder injects:
+      //   "LLM provider: OpenRouter. Backup: Ollama configured."
+      final mentorContext = await buildMentorContextWithProviderConfig();
+      expect(mentorContext, isNotEmpty);
+      expect(mentorContext.contains('OpenRouter'), isTrue);
+      expect(mentorContext.contains('Ollama'), isTrue);
+      expect(mentorContext.contains('provider'), isTrue);
     });
 
     test('Verdict trace: offline-stress scenario produces trace', () {
@@ -1465,8 +1534,8 @@ void main() {
       trace.add('Step 1: PASS — SystemMonitorService implemented, heavy prep defers');
       trace.add('Step 2: PASS — retry-with-backoff implemented in LlmService');
       trace.add('Step 3: PASS — Ollama backup works without API key (B4 failover)');
-      trace.add('Step 4: PARTIAL — device status injected but provider config not');
-      trace.add('Step 5: FAIL — no file-size ceiling or device-aware ingestion');
+      trace.add('Step 4: PASS — device status + provider config injected into mentor context (mentor_context_builder.dart:354-366)');
+      trace.add('Step 5: FAIL — ingest_pdf_to_kb tool IS registered but no device-aware file-size ceiling (closed issue ingestion-file-size-token-ceiling-missing tracked the real gap)');
 
       // ignore: avoid_print
       print('=== Offline-stress scenario trace ===');
@@ -1475,7 +1544,7 @@ void main() {
         print(line);
       }
       // ignore: avoid_print
-      print('Verdict: PARTIAL — 1 FAIL step (device-aware ingestion)');
+      print('Verdict: PARTIAL — Step 5 still FAIL (device-aware file-size ceiling gap)');
       // ignore: avoid_print
       print('=== End trace ===');
     });
