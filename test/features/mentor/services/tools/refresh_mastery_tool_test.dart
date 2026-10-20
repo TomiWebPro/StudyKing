@@ -173,7 +173,7 @@ void main() {
     });
 
     group('usage metering', () {
-      test('records usage with taskType background', () async {
+      test('does NOT record estimated tokens on the meter (no LLM call made)', () async {
         final meter = LlmUsageMeter();
         final tool = RefreshMasteryTool(
           masteryService: mastery,
@@ -183,7 +183,8 @@ void main() {
         await tool.execute({});
         final byType = meter.getTotalTokensPerTaskType();
         final key = PrepCategory.background.taskTypeKey;
-        expect(byType[key], greaterThan(0));
+        // Light prep reads data only — no LLM call, so no tokens are recorded.
+        expect(byType[key], isNull);
       });
     });
 

@@ -6,6 +6,8 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
+import 'package:studyking/core/services/llm_agent/idle_executor.dart';
+import 'package:studyking/features/mentor/services/tools/prep_tool.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 
 class AgentLoop {
@@ -22,15 +24,25 @@ class AgentLoop {
   final ToolRegistry _toolRegistry;
   final LlmTaskManager? _taskManager;
 
+  /// Optional [IdleExecutor] used to defer [PrepTool] invocations to off-period
+  /// execution (Vision Next-Term §4.1–§4.2). When non-null, any tool resolved
+  /// from the registry that is a [PrepTool] is enqueued here instead of
+  /// executed synchronously, so live mentor/teaching conversations never stall
+  /// on prep LLM calls. When null (e.g. legacy tests), prep tools fall back to
+  /// synchronous execution for backward compatibility.
+  final IdleExecutor? _idleExecutor;
+
   AgentLoop({
     required LlmService llmService,
     required String modelId,
     required ToolRegistry toolRegistry,
     LlmTaskManager? taskManager,
+    IdleExecutor? idleExecutor,
   })  : _llmService = llmService,
         _modelId = modelId,
         _toolRegistry = toolRegistry,
-        _taskManager = taskManager;
+        _taskManager = taskManager,
+        _idleExecutor = idleExecutor;
 
   /// Read-only access to the tool registry, exposed for tests that need
   /// to assert on the set of registered tools (e.g. dry-run scenario audits).
@@ -123,6 +135,22 @@ class AgentLoop {
           toolName: parsed.toolName,
           arguments: toolArgs,
         ));
+
+        // Vision Next-Term §4.1–§4.2: PrepTools (PDF ingestion, question
+        // variant generation, lesson pre-generation, mastery refresh) are
+        // off-period work. When an IdleExecutor is wired, defer them so live
+        // conversations never stall on prep LLM calls — the work executes during
+        // idle/away time, not during the live turn.
+        if (tool is PrepTool && _idleExecutor != null) {
+          await _deferPrepTool(
+            tool,
+            toolArgs,
+            parsed.toolName,
+          );
+          finalContent = _prepDeferredMessage;
+          toolCalls.last.result = _prepDeferredMessage;
+          break;
+        }
 
         dynamic toolResult;
         try {
@@ -320,6 +348,25 @@ class AgentLoop {
           arguments: toolArgs,
         );
 
+        // Vision Next-Term §4.1–§4.2: defer PrepTools to off-period execution.
+        if (tool is PrepTool && _idleExecutor != null) {
+          final confirmation = _prepDeferredMessage;
+          toolCall.result = confirmation;
+          toolCalls.add(toolCall);
+
+          // Notify caller that the tool was invoked (even though deferred).
+          await onToolCall?.call(toolCall);
+
+          await _deferPrepTool(
+            tool,
+            toolArgs,
+            parsed.toolName,
+          );
+          finalContent += confirmation;
+          yield confirmation;
+          break;
+        }
+
         dynamic toolResult;
         try {
           toolResult = await tool.execute(toolArgs);
@@ -373,6 +420,39 @@ class AgentLoop {
       }
       yield 'An error occurred during processing.';
     }
+  }
+
+  /// Message yielded to the student when a [PrepTool] is deferred to the
+  /// [IdleExecutor] for off-period execution (Vision Next-Term §4.1–§4.2).
+  static const String _prepDeferredMessage =
+      "I'll prepare this while you're away and have it ready before your next lesson.";
+
+  /// Enqueues a [PrepTool] into the [_idleExecutor] for off-period execution,
+  /// passing the tool's token estimates, CPU class, feature, and subject scope
+  /// so the budget scheduler can gate and attribute the work correctly.
+  Future<void> _deferPrepTool(
+    PrepTool tool,
+    Map<String, dynamic> args,
+    String toolName,
+  ) async {
+    assert(_idleExecutor != null, 'IdleExecutor must be wired to defer prep tools');
+    final subjectId = args['subjectId'] as String?;
+    await _idleExecutor!.enqueuePrepTool(
+      '$toolName (preparation)',
+      () async {
+        final result = await tool.execute(args);
+        return result is Map<String, dynamic>
+            ? result
+            : {'result': result.toString()};
+      },
+      requiresHeavy: tool.cpuClass != PrepCpuClass.light,
+      feature: tool.prepCategory.taskTypeKey,
+      taskType: tool.prepCategory.taskTypeKey,
+      subjectId: subjectId,
+      estimatedInputTokens: tool.estimatedInputTokens,
+      estimatedOutputTokens: tool.estimatedOutputTokens,
+    );
+    _logger.d('Deferred prep tool "$toolName" to IdleExecutor for off-period execution');
   }
 
   String _buildAgentSystemPrompt(String basePrompt) {

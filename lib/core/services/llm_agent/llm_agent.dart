@@ -156,6 +156,7 @@ class AgentFactory {
       modelId: modelId,
       toolRegistry: toolRegistry,
       taskManager: taskManager,
+      idleExecutor: idleExecutor,
     );
 
     return LlmAgent(

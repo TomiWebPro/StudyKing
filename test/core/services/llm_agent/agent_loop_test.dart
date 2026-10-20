@@ -5,7 +5,10 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm_agent/agent_loop.dart';
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
+import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/core/services/prep_budget.dart';
+import 'package:studyking/features/mentor/services/tools/prep_tool.dart';
 
 import '../../../helpers/hive_init_helper.dart';
 
@@ -225,6 +228,48 @@ class _LlmTaskTypeForTest {
     if (f.contains('transcription') || f.contains('ocr')) return 'transcription';
     if (f.contains('background') || f.contains('idle')) return 'background';
     return null;
+  }
+}
+
+/// Hand-written fake [PrepTool] that records whether its [execute] was invoked
+/// and what arguments it received. Used to assert that prep work is deferred
+/// to the [IdleExecutor] rather than running during the agent turn.
+class _FakePrepTool extends PrepTool {
+  bool executeCalled = false;
+  Map<String, dynamic>? receivedArgs;
+
+  @override
+  String get name => 'fake_prep_tool';
+
+  @override
+  String get description => 'A fake prep tool for testing deferral';
+
+  @override
+  Map<String, dynamic> get parameters => {
+        'type': 'object',
+        'properties': {
+          'subjectId': {'type': 'string', 'description': 'Subject ID'},
+        },
+        'required': ['subjectId'],
+      };
+
+  @override
+  int get estimatedInputTokens => 1000;
+
+  @override
+  int get estimatedOutputTokens => 500;
+
+  @override
+  PrepCpuClass get cpuClass => PrepCpuClass.heavy;
+
+  @override
+  PrepCategory get prepCategory => PrepCategory.pdfIngestion;
+
+  @override
+  Future<Map<String, dynamic>> execute(Map<String, dynamic> args) async {
+    executeCalled = true;
+    receivedArgs = args;
+    return {'success': true, 'prepared': true};
   }
 }
 
@@ -625,6 +670,117 @@ void main() {
         (t) => t.endTime != null && t.taskType == 'mentor',
       );
       expect(agentTask.tokensUsed, greaterThan(0));
+    });
+  });
+
+  group('AgentLoop prep-tool deferral', () {
+    test('runStream defers PrepTool to IdleExecutor instead of executing synchronously', () async {
+      final prepTool = _FakePrepTool();
+      final fakeLlm = _StreamingFakeLlmService([
+        'TOOL_CALL: fake_prep_tool\nARGUMENTS: {"subjectId": "math"}',
+      ]);
+      final registry = ToolRegistry()..register(prepTool);
+
+      // Quiet-hours callback always defers so the task never auto-executes
+      // during the test — mirroring the real scenario where prep runs off-period.
+      final idleExecutor = IdleExecutor(
+        shouldDeferForQuietHours: (_) => true,
+      );
+
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: registry,
+        idleExecutor: idleExecutor,
+      );
+
+      final chunks = await loop.runStream(
+        userMessage: 'Prepare knowledge chunks',
+        studentId: 's1',
+        systemPrompt: 'You are a tutor.',
+        feature: 'mentor',
+      ).toList();
+
+      // The prep tool's execute() must NOT have run during the stream.
+      expect(prepTool.executeCalled, isFalse);
+
+      // The IdleExecutor queue holds the deferred task.
+      expect(idleExecutor.queue, isNotEmpty);
+      expect(idleExecutor.queue.first.description, contains('fake_prep_tool'));
+
+      // The student receives a confirmation message.
+      final output = chunks.join();
+      expect(output, contains("I'll prepare this while you're away"));
+    });
+
+    test('run defers PrepTool to IdleExecutor instead of executing synchronously', () async {
+      final prepTool = _FakePrepTool();
+      final fakeLlm = _FakeLlmService([
+        'TOOL_CALL: fake_prep_tool\nARGUMENTS: {"subjectId": "math"}',
+      ]);
+      final registry = ToolRegistry()..register(prepTool);
+
+      final idleExecutor = IdleExecutor(
+        shouldDeferForQuietHours: (_) => true,
+      );
+
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: registry,
+        idleExecutor: idleExecutor,
+      );
+
+      final response = await loop.run(
+        userMessage: 'Prepare knowledge chunks',
+        studentId: 's1',
+        systemPrompt: 'You are a tutor.',
+        feature: 'mentor',
+      );
+
+      // The prep tool's execute() must NOT have run synchronously.
+      expect(prepTool.executeCalled, isFalse);
+
+      // The IdleExecutor queue holds the deferred task.
+      expect(idleExecutor.queue, isNotEmpty);
+      expect(idleExecutor.queue.first.description, contains('fake_prep_tool'));
+
+      // The student receives a confirmation.
+      expect(response.content, contains("I'll prepare this while you're away"));
+
+      // The tool-call record is preserved.
+      expect(response.toolCalls, hasLength(1));
+      expect(response.toolCalls.first.toolName, 'fake_prep_tool');
+    });
+
+    test('falls back to synchronous execution when IdleExecutor is not wired', () async {
+      final prepTool = _FakePrepTool();
+      final fakeLlm = _FakeLlmService([
+        'TOOL_CALL: fake_prep_tool\nARGUMENTS: {"subjectId": "math"}',
+        'Done preparing.',
+      ]);
+      final registry = ToolRegistry()..register(prepTool);
+
+      // No idleExecutor provided — backward-compatible synchronous execution.
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: registry,
+      );
+
+      final response = await loop.run(
+        userMessage: 'Prepare knowledge chunks',
+        studentId: 's1',
+        systemPrompt: 'You are a tutor.',
+        feature: 'mentor',
+      );
+
+      // Without an IdleExecutor, the tool executes synchronously.
+      expect(prepTool.executeCalled, isTrue);
+      expect(prepTool.receivedArgs, containsPair('subjectId', 'math'));
+
+      // The conversation continues after the tool result.
+      expect(response.content, 'Done preparing.');
     });
   });
 }

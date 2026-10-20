@@ -22,6 +22,7 @@ class RefreshMasteryTool extends PrepTool {
   final MasteryGraphService _masteryService;
   final StudentIdService _studentIdService;
   final LlmTaskManager? _taskManager;
+  // ignore: unused_field
   final LlmUsageMeter? _usageMeter;
   final PrepBudgetService? _budgetService;
 
@@ -110,22 +111,9 @@ class RefreshMasteryTool extends PrepTool {
       if (taskId.isNotEmpty) {
         _taskManager?.completeTask(
           taskId,
-          tokensUsed: estimatedInputTokens + estimatedOutputTokens,
+          tokensUsed: 0,
         );
       }
-
-      // Record estimated usage under the correct taskType so
-      // PrepBudgetService can track spend per category.
-      _usageMeter?.recordUsage(
-        id: taskId.isNotEmpty
-            ? taskId
-            : 'mastery_refresh_${DateTime.now().millisecondsSinceEpoch}',
-        feature: 'mastery_refresh',
-        modelId: 'background',
-        inputTokens: estimatedInputTokens,
-        outputTokens: estimatedOutputTokens,
-        taskType: prepCategory.taskTypeKey,
-      );
 
       return {
         'success': true,
