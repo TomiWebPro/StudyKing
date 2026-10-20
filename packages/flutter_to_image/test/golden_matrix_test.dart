@@ -54,6 +54,67 @@ void main() {
       );
       expect(path, 'test/goldens/widget_en_100_system.png');
     });
+
+    // ---------------------------------------------------------------------------
+    // textDirection (RTL) coverage for buildGoldenPath.
+    //
+    // `buildGoldenPath` gained a `textDirection` parameter so that RTL golden
+    // files get a distinct `_rtl` suffix, preventing collisions with LTR
+    // variants. Without this, a RTL golden and its LTR counterpart for the same
+    // name × locale × width × theme would resolve to the same file path.
+    // ---------------------------------------------------------------------------
+    test('rtl textDirection appends _rtl suffix to path', () {
+      final path = buildGoldenPath(
+        'my_widget',
+        const Locale('en'),
+        const Size(375, 800),
+        ThemeMode.light,
+        textDirection: TextDirection.rtl,
+      );
+      expect(path, 'test/goldens/my_widget_en_375_light_rtl.png');
+    });
+
+    test('null textDirection produces no direction suffix (backward compatible)', () {
+      final withoutDirection = buildGoldenPath(
+        'my_widget',
+        const Locale('en'),
+        const Size(375, 800),
+        ThemeMode.light,
+      );
+      final withNull = buildGoldenPath(
+        'my_widget',
+        const Locale('en'),
+        const Size(375, 800),
+        ThemeMode.light,
+        textDirection: null,
+      );
+      expect(withoutDirection, 'test/goldens/my_widget_en_375_light.png');
+      expect(withNull, equals(withoutDirection));
+    });
+
+    test('ltr textDirection produces same path as null (no suffix)', () {
+      final withNull = buildGoldenPath(
+        'card', const Locale('en'), const Size(375, 80), ThemeMode.light,
+      );
+      final withLtr = buildGoldenPath(
+        'card', const Locale('en'), const Size(375, 80), ThemeMode.light,
+        textDirection: TextDirection.ltr,
+      );
+      expect(withLtr, equals(withNull));
+    });
+
+    test('rtl and ltr produce distinct paths for same name/locale/width/theme', () {
+      final ltr = buildGoldenPath(
+        'widget', const Locale('en'), const Size(375, 800), ThemeMode.dark,
+      );
+      final rtl = buildGoldenPath(
+        'widget', const Locale('en'), const Size(375, 800), ThemeMode.dark,
+        textDirection: TextDirection.rtl,
+      );
+      expect(rtl, isNot(equals(ltr)));
+      expect(rtl, contains('_rtl.png'));
+      expect(ltr, isNot(contains('_rtl.png')));
+    });
   });
 
   group('renderGoldenMatrix', () {
@@ -265,6 +326,41 @@ void main() {
 
       expect(matrix, isEmpty);
     });
+
+    testWidgets('textDirection rtl produces distinct _rtl-suffixed paths from ltr',
+        (tester) async {
+      // When the pathBuilder threads `textDirection` into `buildGoldenPath`,
+      // RTL and LTR renders must produce different paths — no collision.
+      final ltrMatrix = await renderGoldenMatrixFull(
+        const Material(child: Center(child: Text('Dir'))),
+        locales: [const Locale('en')],
+        sizes: [const Size(100, 100)],
+        themeModes: [ThemeMode.light],
+        pixelRatio: 1.0,
+        textDirection: TextDirection.ltr,
+        pathBuilder: (locale, size, theme) => buildGoldenPath(
+          'dirpath', locale, size, theme,
+          textDirection: TextDirection.ltr,
+        ),
+      );
+
+      final rtlMatrix = await renderGoldenMatrixFull(
+        const Material(child: Center(child: Text('Dir'))),
+        locales: [const Locale('en')],
+        sizes: [const Size(100, 100)],
+        themeModes: [ThemeMode.light],
+        pixelRatio: 1.0,
+        textDirection: TextDirection.rtl,
+        pathBuilder: (locale, size, theme) => buildGoldenPath(
+          'dirpath', locale, size, theme,
+          textDirection: TextDirection.rtl,
+        ),
+      );
+
+      expect(ltrMatrix.keys.first, 'test/goldens/dirpath_en_100_light.png');
+      expect(rtlMatrix.keys.first, 'test/goldens/dirpath_en_100_light_rtl.png');
+      expect(rtlMatrix.keys, isNot(equals(ltrMatrix.keys)));
+    });
   });
 
   group('buildGoldenPathWithTextScale', () {
@@ -308,6 +404,42 @@ void main() {
       expect(a, isNot(equals(b)));
       expect(a, contains('x1.0'));
       expect(b, contains('x2.0'));
+    });
+
+    // ---------------------------------------------------------------------------
+    // textDirection (RTL) coverage for buildGoldenPathWithTextScale.
+    // Same rationale as buildGoldenPath: RTL goldens must get a `_rtl` suffix
+    // so they don't collide with their LTR counterparts.
+    // ---------------------------------------------------------------------------
+    test('rtl textDirection appends _rtl suffix to path', () {
+      final path = buildGoldenPathWithTextScale(
+        'card', const Locale('en'), const Size(375, 80), 1.0, ThemeMode.light,
+        textDirection: TextDirection.rtl,
+      );
+      expect(path, 'test/goldens/card_en_375x1.0_light_rtl.png');
+    });
+
+    test('null textDirection produces no direction suffix (backward compatible)', () {
+      final withoutDirection = buildGoldenPathWithTextScale(
+        'card', const Locale('en'), const Size(375, 80), 1.5, ThemeMode.dark,
+      );
+      final withNull = buildGoldenPathWithTextScale(
+        'card', const Locale('en'), const Size(375, 80), 1.5, ThemeMode.dark,
+        textDirection: null,
+      );
+      expect(withoutDirection, 'test/goldens/card_en_375x1.5_dark.png');
+      expect(withNull, equals(withoutDirection));
+    });
+
+    test('ltr textDirection produces same path as null (no suffix)', () {
+      final withNull = buildGoldenPathWithTextScale(
+        'w', const Locale('es'), const Size(1200, 80), 2.0, ThemeMode.light,
+      );
+      final withLtr = buildGoldenPathWithTextScale(
+        'w', const Locale('es'), const Size(1200, 80), 2.0, ThemeMode.light,
+        textDirection: TextDirection.ltr,
+      );
+      expect(withLtr, equals(withNull));
     });
   });
 
@@ -384,6 +516,44 @@ void main() {
       );
 
       expect(result, isEmpty);
+    });
+
+    testWidgets('textDirection rtl produces distinct _rtl-suffixed paths from ltr',
+        (tester) async {
+      // When the pathBuilder threads `textDirection` into
+      // `buildGoldenPathWithTextScale`, RTL and LTR sweeps must produce
+      // different paths — no collision on the same golden file.
+      final ltrSweep = await renderGoldenTextScaleSweep(
+        const Material(child: Center(child: Text('Dir'))),
+        locale: const Locale('en'),
+        size: const Size(100, 100),
+        textScales: [1.0],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        textDirection: TextDirection.ltr,
+        pathBuilder: (locale, size, textScale, theme) => buildGoldenPathWithTextScale(
+          'sweep_dir', locale, size, textScale, theme,
+          textDirection: TextDirection.ltr,
+        ),
+      );
+
+      final rtlSweep = await renderGoldenTextScaleSweep(
+        const Material(child: Center(child: Text('Dir'))),
+        locale: const Locale('en'),
+        size: const Size(100, 100),
+        textScales: [1.0],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        textDirection: TextDirection.rtl,
+        pathBuilder: (locale, size, textScale, theme) => buildGoldenPathWithTextScale(
+          'sweep_dir', locale, size, textScale, theme,
+          textDirection: TextDirection.rtl,
+        ),
+      );
+
+      expect(ltrSweep.keys.first, 'test/goldens/sweep_dir_en_100x1.0_light.png');
+      expect(rtlSweep.keys.first, 'test/goldens/sweep_dir_en_100x1.0_light_rtl.png');
+      expect(rtlSweep.keys, isNot(equals(ltrSweep.keys)));
     });
   });
 

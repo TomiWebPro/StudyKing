@@ -106,18 +106,26 @@ Future<Map<String, Uint8List>> renderGoldenMatrixFull(
 
 /// Default path builder following the convention:
 /// `test/goldens/<name>_<locale>_<width>_<theme>.png`
+///
+/// Pass [textDirection] as [TextDirection.rtl] to append a `_rtl` suffix to the
+/// path (e.g. `test/goldens/<name>_en_375_light_rtl.png`), matching the
+/// convention used by RTL golden tests. When `null` or [TextDirection.ltr]
+/// (the default), no direction suffix is appended — LTR is the default
+/// direction and needs no token, preserving backward compatibility.
 String buildGoldenPath(
   String name,
   Locale locale,
   Size size,
-  ThemeMode theme,
-) {
+  ThemeMode theme, {
+  TextDirection? textDirection,
+}) {
   final themeName = switch (theme) {
     ThemeMode.light => 'light',
     ThemeMode.dark => 'dark',
     ThemeMode.system => 'system',
   };
-  return 'test/goldens/${name}_${locale.languageCode}_${size.width.toInt()}_$themeName.png';
+  final directionSuffix = textDirection == TextDirection.rtl ? '_rtl' : '';
+  return 'test/goldens/${name}_${locale.languageCode}_${size.width.toInt()}_$themeName$directionSuffix.png';
 }
 
 /// Path builder for [renderGoldenTextScaleSweep].
@@ -139,20 +147,26 @@ typedef TextScaleGoldenPathBuilder = String Function(
 /// `<textScale>` is written with one decimal place and an `x` separator
 /// (e.g. `x1.0`, `x1.5`, `x2.0`) so every scale yields a unique, sortable
 /// filename, mirroring [buildGoldenPath] but extending it with the scale.
+///
+/// Pass [textDirection] as [TextDirection.rtl] to append a `_rtl` suffix
+/// (e.g. `test/goldens/<name>_en_375x1.0_light_rtl.png`); when `null` or
+/// [TextDirection.ltr] no suffix is appended (backward compatible).
 String buildGoldenPathWithTextScale(
   String name,
   Locale locale,
   Size size,
   double textScale,
-  ThemeMode theme,
-) {
+  ThemeMode theme, {
+  TextDirection? textDirection,
+}) {
   final themeName = switch (theme) {
     ThemeMode.light => 'light',
     ThemeMode.dark => 'dark',
     ThemeMode.system => 'system',
   };
   final scaleName = textScale.toStringAsFixed(1);
-  return 'test/goldens/${name}_${locale.languageCode}_${size.width.toInt()}x${scaleName}_$themeName.png';
+  final directionSuffix = textDirection == TextDirection.rtl ? '_rtl' : '';
+  return 'test/goldens/${name}_${locale.languageCode}_${size.width.toInt()}x${scaleName}_$themeName$directionSuffix.png';
 }
 
 /// Renders [widget] across a sweep of [textScales] (keeping locale, size, and

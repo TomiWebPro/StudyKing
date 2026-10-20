@@ -37,6 +37,7 @@ Future<Uint8List> renderWidgetToPng(
   List<LocalizationsDelegate<dynamic>>? localizationsDelegates,
   List<Locale>? supportedLocales,
   Brightness? brightness,
+  TextDirection textDirection = TextDirection.ltr,
 })
 ```
 

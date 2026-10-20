@@ -61,12 +61,16 @@ Future<Uint8List> renderWidgetToPng(
   List<LocalizationsDelegate<dynamic>>? localizationsDelegates,
   List<Locale>? supportedLocales,
   Brightness? brightness,
+  TextDirection textDirection = TextDirection.ltr,
 })
 ```
 
 Renders `widget` to PNG bytes. The widget is wrapped internally with
 `MediaQuery` (size, text-scale), `Theme` (light/dark), `Directionality`
-(LTR), and an optional `Localizations` delegate wrapper.
+(LTR), and an optional `Localizations` delegate wrapper. `textDirection`
+controls the `Directionality` wrapper — pass `TextDirection.rtl` to force
+RTL rendering for an LTR locale (useful for catching layout-mirroring
+regressions on widgets like `DashboardNavCard`).
 
 ### `renderWidgetToImageResult`
 
@@ -142,11 +146,20 @@ Like `renderScreenToPng` but returns an `ImageResult` carrying metadata
 ### Golden matrix helpers
 
 ```dart
-String buildGoldenPath(String name, Locale locale, Size size, ThemeMode theme)
+String buildGoldenPath(
+  String name, Locale locale, Size size, ThemeMode theme, {
+  TextDirection? textDirection,
+})
 ```
 
 Returns a path following the convention:
 `test/goldens/<name>_<locale>_<width>_<theme>.png`
+
+When `textDirection` is `TextDirection.rtl`, a `_rtl` suffix is appended before
+the `.png` extension (e.g. `test/goldens/<name>_en_375_light_rtl.png`), giving
+RTL goldens a distinct path from their LTR counterparts. When `null` or
+`TextDirection.ltr` (the default), no suffix is appended — LTR is the default
+direction and needs no token, preserving backward compatibility.
 
 ```dart
 Future<Map<String, Uint8List>> renderGoldenMatrix(
@@ -420,6 +433,7 @@ directory) throws `StateError`.
 
 ```
 test/goldens/<widget_or_screen>_<locale>_<width>_<theme>.png
+test/goldens/<widget_or_screen>_<locale>_<width>_<theme>_rtl.png
 ```
 
 | Field | Values | Example |
@@ -427,11 +441,18 @@ test/goldens/<widget_or_screen>_<locale>_<width>_<theme>.png
 | `<locale>` | `en`, `es` | `en` |
 | `<width>` | phone `375`, desktop `1200` | `375` |
 | `<theme>` | `light`, `dark` | `light` |
+| `<direction>` _(optional)_ | `_rtl` for `TextDirection.rtl` | `_rtl` |
 
-**Example:** `test/goldens/lesson_list_es_375_dark.png`
+The optional `_rtl` suffix is appended when a golden is rendered with
+`TextDirection.rtl` so that RTL and LTR variants for the same name × locale ×
+width × theme do not collide. LTR renders omit the suffix (backward compatible).
 
-Use `buildGoldenPath()` from the package to generate paths — it enforces the
-convention for you.
+**Example:** `test/goldens/lesson_list_es_375_dark.png` (LTR)
+**Example:** `test/goldens/lesson_list_es_375_dark_rtl.png` (RTL)
+
+Use `buildGoldenPath()` (and `buildGoldenPathWithTextScale()`) from the package
+to generate paths — they enforce the convention for you and thread the
+`textDirection` parameter into the `_rtl` suffix automatically.
 
 ---
 
@@ -631,12 +652,18 @@ String buildGoldenPathWithTextScale(
   Locale locale,
   Size size,
   double textScale,
-  ThemeMode theme,
-)
+  ThemeMode theme, {
+  TextDirection? textDirection,
+})
 ```
 
 Returns a path following the convention:
 `test/goldens/<name>_<locale>_<width>x<textScale>_<theme>.png`
+
+When `textDirection` is `TextDirection.rtl`, a `_rtl` suffix is appended before
+the `.png` extension (e.g. `test/goldens/<name>_en_375x1.0_light_rtl.png`),
+giving RTL goldens a distinct path from their LTR counterparts. When `null` or
+`TextDirection.ltr` (the default), no suffix is appended (backward compatible).
 
 Used by `renderGoldenTextScaleSweep` (widget-level) and
 `renderScreenGoldenTextScaleSweep` (screen-level) to produce unique, sortable
