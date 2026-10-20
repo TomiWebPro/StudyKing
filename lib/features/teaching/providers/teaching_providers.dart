@@ -16,6 +16,7 @@ import 'package:studyking/features/teaching/services/lesson_recap_service.dart';
 import 'package:studyking/features/teaching/data/repositories/lesson_recap_repository.dart';
 import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart' show lessonAgentServiceProvider;
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart' show topicRepositoryProvider;
 
 final teachingModelIdProvider = Provider<String>((ref) {
   return ref.watch(modelRouterProvider).resolve(LlmTaskType.tutor);
@@ -77,6 +78,7 @@ final tutorServiceProvider = Provider<TutorService>((ref) {
     feedbackRepository: ref.watch(lessonFeedbackRepositoryProvider),
     clock: ref.watch(clockProvider),
     preGenerateLessonTool: ref.watch(preGenerateLessonToolProvider),
+    topicRepository: ref.watch(topicRepositoryProvider),
   );
 });
 

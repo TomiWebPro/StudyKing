@@ -17,6 +17,7 @@ import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -360,6 +361,25 @@ class FakeLessonRepository extends LessonRepository {
   @override
   Future<Result<List<Lesson>>> getAll() async =>
       Result.success(List.from(_created));
+}
+
+/// Hand-written fake [TopicRepository] that returns topics from an in-memory
+/// map without touching Hive — used to verify TutorService resolves a
+/// human-readable topic title before pre-generating lessons.
+class FakeTopicRepository extends TopicRepository {
+  final Map<String, Topic> _topics = {};
+
+  void setTopic(Topic topic) {
+    _topics[topic.id] = topic;
+  }
+
+  @override
+  Future<Result<Topic?>> get(String key) async {
+    return Result.success(_topics[key]);
+  }
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 /// Minimal LessonAgentService needed only to satisfy the
@@ -1585,6 +1605,179 @@ void main() {
         expect(result['success'], isTrue);
         expect(fakeLessonRepo.createdLessons, isEmpty);
         expect(fakeTool.executedArgs, isEmpty);
+      });
+
+      test('passes resolved human-readable topicTitle to the prep tool',
+          () async {
+        // Solidification for teaching-pregen-topic-title-is-topic-id:
+        // generateNextTopicLesson must resolve a human-readable title from the
+        // TopicRepository (not the bare topicId) before invoking the prep tool,
+        // so pre-generated lessons surface with a real label like "Cell
+        // Structure" instead of "weak_topic_id".
+        masteryService.weakTopicsToReturn = [
+          MasteryState(
+            studentId: 'student-1',
+            topicId: 'weak_topic_id',
+            lastAttempt: DateTime.now(),
+            lastUpdated: DateTime.now(),
+            subjectId: 'math',
+          ),
+        ];
+
+        final fakeTopicRepo = FakeTopicRepository();
+        fakeTopicRepo.setTopic(Topic(
+          id: 'weak_topic_id',
+          subjectId: 'math',
+          title: 'Cell Structure',
+          description: '',
+          syllabusText: '',
+        ));
+
+        final fakeTool = FakePreGenerateLessonTool(
+          lessonRepository: fakeLessonRepo,
+        );
+
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          lessonRepository: fakeLessonRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+          preGenerateLessonTool: fakeTool,
+          topicRepository: fakeTopicRepo,
+        );
+
+        final session = TutorSession(
+          id: 'session-1',
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'current-topic',
+          topicTitle: 'Current Topic',
+          startTime: DateTime.now(),
+        );
+
+        await service.generateNextTopicLesson(session);
+
+        expect(fakeTool.executedArgs, isNotEmpty);
+        // topicTitle must be the resolved human-readable title, not the bare
+        // topicId that was previously passed (tutor_service.dart:547 bug).
+        expect(fakeTool.executedArgs.first['topicTitle'],
+            equals('Cell Structure'));
+        // The persisted lesson's title is also human-readable (the tool
+        // stores topicTitle as Lesson.title — lesson_agent_service.dart:62).
+        expect(fakeLessonRepo.createdLessons.first.title,
+            equals('Cell Structure'));
+      });
+
+      test(
+          'falls back to labeled topicId when topic title cannot be resolved',
+          () async {
+        // When the topic is absent from the repository (e.g. not yet
+        // catalogued), the title falls back to a clear subject/topic label
+        // rather than silently using the bare opaque ID.
+        masteryService.weakTopicsToReturn = [
+          MasteryState(
+            studentId: 'student-1',
+            topicId: 'weak_topic_id',
+            lastAttempt: DateTime.now(),
+            lastUpdated: DateTime.now(),
+            subjectId: 'math',
+          ),
+        ];
+
+        final fakeTopicRepo = FakeTopicRepository(); // empty store
+
+        final fakeTool = FakePreGenerateLessonTool(
+          lessonRepository: fakeLessonRepo,
+        );
+
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          lessonRepository: fakeLessonRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+          preGenerateLessonTool: fakeTool,
+          topicRepository: fakeTopicRepo,
+        );
+
+        final session = TutorSession(
+          id: 'session-1',
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'current-topic',
+          topicTitle: 'Current Topic',
+          startTime: DateTime.now(),
+        );
+
+        await service.generateNextTopicLesson(session);
+
+        // Fallback label carries subject context: "math/weak_topic_id".
+        expect(fakeTool.executedArgs.first['topicTitle'],
+            equals('math/weak_topic_id'));
+      });
+
+      test(
+          'placeholder lesson uses resolved topic title when tool is null',
+          () async {
+        // The no-tool placeholder path must also resolve the title (not just
+        // the wired-tool path) so degraded environments degrade gracefully
+        // without opaque IDs.
+        masteryService.weakTopicsToReturn = [
+          MasteryState(
+            studentId: 'student-1',
+            topicId: 'weak_topic_id',
+            lastAttempt: DateTime.now(),
+            lastUpdated: DateTime.now(),
+            subjectId: 'math',
+          ),
+        ];
+
+        final fakeTopicRepo = FakeTopicRepository();
+        fakeTopicRepo.setTopic(Topic(
+          id: 'weak_topic_id',
+          subjectId: 'math',
+          title: 'Cell Structure',
+          description: '',
+          syllabusText: '',
+        ));
+
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          lessonRepository: fakeLessonRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+          topicRepository: fakeTopicRepo,
+        );
+
+        final session = TutorSession(
+          id: 'session-1',
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'current-topic',
+          topicTitle: 'Current Topic',
+          startTime: DateTime.now(),
+        );
+
+        final result = await service.generateNextTopicLesson(session);
+
+        expect(result['success'], isTrue);
+        final lesson = fakeLessonRepo.createdLessons.first;
+        expect(lesson.title, equals('Cell Structure'));
+        expect(lesson.blocks.first.content, contains('Cell Structure'));
       });
     });
   });

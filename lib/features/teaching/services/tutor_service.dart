@@ -19,6 +19,7 @@ import 'package:studyking/features/teaching/data/repositories/lesson_feedback_re
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/models/lesson_plan_model.dart';
 import 'package:studyking/features/teaching/data/repositories/lesson_recap_repository.dart';
 import 'package:studyking/features/teaching/services/lesson_recap_service.dart';
@@ -55,6 +56,7 @@ class TutorService {
   final Clock _clock;
   final ConversationRepository _conversationRepository;
   final LessonRepository _lessonRepository;
+  final TopicRepository _topicRepository;
   final LessonRecapService _lessonRecapService;
   final VoiceService? _voiceService;
   final LongTermMemory? _longTermMemory;
@@ -86,6 +88,7 @@ class TutorService {
     LessonFeedbackRepository? feedbackRepository,
     PlannerService? plannerService,
     PreGenerateLessonTool? preGenerateLessonTool,
+    TopicRepository? topicRepository,
     Clock? clock,
   })  : _database = database,
         _llmService = llmService,
@@ -109,6 +112,7 @@ class TutorService {
         _feedbackRepository = feedbackRepository ?? LessonFeedbackRepository(),
         _plannerService = plannerService,
         _preGenerateLessonTool = preGenerateLessonTool,
+        _topicRepository = topicRepository ?? TopicRepository(),
         _clock = clock ?? SystemClock() {
     _feedbackAnalyzer = FeedbackAnalyzer(_feedbackRepository);
   }
@@ -569,11 +573,16 @@ class TutorService {
         final subjectId =
             nextTopic.subjectId.isNotEmpty ? nextTopic.subjectId : session.subjectId;
 
+        // Resolve a human-readable topic title from the TopicRepository so
+        // pre-generated lessons never surface with an opaque machine ID as
+        // their title. Falls back to a labeled form when the topic is absent.
+        final topicTitle = await _resolveTopicTitle(nextTopic.topicId, subjectId);
+
         if (_preGenerateLessonTool != null) {
           final result = await _preGenerateLessonTool.execute({
             'subjectId': subjectId,
             'topicId': nextTopic.topicId,
-            'topicTitle': nextTopic.topicId,
+            'topicTitle': topicTitle,
             'localeName': _localeName,
           });
           return result;
@@ -584,7 +593,7 @@ class TutorService {
         final lesson = Lesson(
           id: const Uuid().v4(),
           subjectId: session.subjectId,
-          title: nextTopic.topicId,
+          title: topicTitle,
           topicId: nextTopic.topicId,
           blocks: [
             LessonBlock(
@@ -592,7 +601,7 @@ class TutorService {
               subjectId: session.subjectId,
               lessonId: nextTopic.topicId,
               type: LessonBlockType.text,
-              content: 'Pre-generated lesson for ${nextTopic.topicId}. Open to start learning.',
+              content: 'Pre-generated lesson for $topicTitle. Open to start learning.',
               order: 0,
             ),
           ],
@@ -612,6 +621,27 @@ class TutorService {
       _logger.w('Next topic lesson prep failed', e);
       return {'success': false, 'error': e.toString()};
     }
+  }
+
+  /// Resolves a human-readable topic title for [topicId] by looking it up in
+  /// [_topicRepository]. Returns the topic's `title` when available; otherwise
+  /// falls back to a labeled form (`subjectId/topicId`) so pre-generated
+  /// lessons never surface with a bare machine identifier as their title.
+  ///
+  /// The fallback still carries the subject context so a reader can tell which
+  /// syllabus the topic belongs to, rather than seeing an opaque ID alone.
+  Future<String> _resolveTopicTitle(String topicId, String subjectId) async {
+    try {
+      final result = await _topicRepository.get(topicId);
+      if (result.isSuccess &&
+          result.data != null &&
+          result.data!.title.isNotEmpty) {
+        return result.data!.title;
+      }
+    } catch (e) {
+      _logger.w('Failed to resolve topic title for $topicId', e);
+    }
+    return '$subjectId/$topicId';
   }
 
   void _enqueueNextTopicPrep(TutorSession session) {
