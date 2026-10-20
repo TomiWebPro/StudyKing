@@ -65,8 +65,13 @@ Future<Uint8List> renderScreenToPng(
   double textScale = 1.0,
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
   required List<Locale> supportedLocales,
+  Brightness? brightness,
 })
 ```
+
+The `brightness` parameter resolves `ThemeMode.system` to a concrete theme
+(light or dark), mirroring `renderWidgetToPng`. It is ignored when `themeMode`
+is explicitly `ThemeMode.light` or `ThemeMode.dark`.
 
 The `screen` is placed as `home` in the MaterialApp. If it needs a `Scaffold`
 ancestor that it doesn't provide itself, wrap it before passing. For
@@ -140,6 +145,49 @@ final goldens = await renderScreenGoldenMatrixFull(
   ),
 );
 // goldens now contains 8 entries (2×2×2).
+```
+
+### `renderGoldenTextScaleSweep`
+
+Renders the same widget across a sweep of text scales (keeping locale, size,
+and theme fixed) and returns a map of golden-path → PNG bytes:
+
+```dart
+final sweeps = await renderGoldenTextScaleSweep(
+  widget,
+  locale: const Locale('en'),
+  size: const Size(375, 800),
+  textScales: [1.0, 1.5, 2.0],
+  themeMode: ThemeMode.light,
+  pathBuilder: (locale, size, textScale, theme) =>
+      buildGoldenPathWithTextScale('my_widget', locale, size, textScale, theme),
+);
+// sweeps now contains 3 entries (one per text scale).
+```
+
+### `renderScreenGoldenTextScaleSweep`
+
+Screen-level counterpart of `renderGoldenTextScaleSweep`. Use this for a
+`MaterialApp`-rooted screen across text scales. Like
+`renderScreenGoldenMatrixFull`, it takes a `screenBuilder` invoked **once per
+cell** to avoid `OverlayEntry`-reuse errors:
+
+```dart
+final sweeps = await renderScreenGoldenTextScaleSweep(
+  (locale, theme) => Scaffold(
+    appBar: AppBar(title: Text('Demo')),
+    body: MyScreen(),
+  ),
+  locale: const Locale('en'),
+  size: const Size(375, 800),
+  textScales: [1.0, 1.5, 2.0],
+  themeMode: ThemeMode.light,
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  pathBuilder: (locale, size, textScale, theme) =>
+      buildGoldenPathWithTextScale('my_screen', locale, size, textScale, theme),
+);
+// sweeps now contains 3 entries (one per text scale).
 ```
 
 ## Usage in a golden test

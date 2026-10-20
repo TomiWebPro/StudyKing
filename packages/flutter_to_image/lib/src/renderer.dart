@@ -274,6 +274,11 @@ Future<ImageResult> renderWidgetToImageResult(
 /// Text direction is driven by [locale] through MaterialApp's built-in
 /// [Directionality] resolution.
 ///
+/// [brightness] is used to resolve [ThemeMode.system] to a concrete
+/// [ThemeData] (light or dark), mirroring [renderWidgetToPng]. When
+/// [themeMode] is explicitly [ThemeMode.light] or [ThemeMode.dark] the
+/// [brightness] value is ignored.
+///
 /// Must be called from within a `testWidgets` callback so that the
 /// `TestWidgetsFlutterBinding` is in the "in test" state.
 Future<Uint8List> renderScreenToPng(
@@ -285,6 +290,7 @@ Future<Uint8List> renderScreenToPng(
   double textScale = 1.0,
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
   required List<Locale> supportedLocales,
+  Brightness? brightness,
 }) async {
   final result = await renderScreenToImageResult(
     screen,
@@ -295,6 +301,7 @@ Future<Uint8List> renderScreenToPng(
     textScale: textScale,
     localizationsDelegates: localizationsDelegates,
     supportedLocales: supportedLocales,
+    brightness: brightness,
   );
   return result.pngBytes;
 }
@@ -314,10 +321,22 @@ Future<ImageResult> renderScreenToImageResult(
   double textScale = 1.0,
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
   required List<Locale> supportedLocales,
+  Brightness? brightness,
 }) async {
-  final themeData = themeMode == ThemeMode.dark
-      ? ThemeData.dark()
-      : ThemeData.light();
+  // Resolve theme data based on themeMode / brightness, mirroring the
+  // widget-level [renderWidgetToImageResult] so that [ThemeMode.system]
+  // honours [brightness] instead of always defaulting to light.
+  final ThemeData themeData;
+  switch (themeMode) {
+    case ThemeMode.dark:
+      themeData = ThemeData.dark();
+    case ThemeMode.light:
+      themeData = ThemeData.light();
+    case ThemeMode.system:
+      themeData = brightness == Brightness.dark
+          ? ThemeData.dark()
+          : ThemeData.light();
+  }
 
   // Build a MaterialApp root that carries the locale, theme, text-scale, and
   // localisation delegates — exactly the wrapper every screen-level golden
@@ -351,6 +370,7 @@ Future<ImageResult> renderScreenToImageResult(
     locale: locale,
     themeMode: themeMode,
     textScale: textScale,
+    brightness: brightness,
   );
 }
 

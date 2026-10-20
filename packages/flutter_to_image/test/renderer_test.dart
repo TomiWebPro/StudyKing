@@ -364,6 +364,34 @@ void main() {
       expect(first, isNotEmpty);
       expect(second, isNotEmpty);
     });
+
+    testWidgets('brightness resolves ThemeMode.system to dark theme', (tester) async {
+      final dark = await renderScreenToPng(
+        const Material(child: Center(child: Text('System'))),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.system,
+        brightness: Brightness.dark,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      final light = await renderScreenToPng(
+        const Material(child: Center(child: Text('System'))),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.system,
+        brightness: Brightness.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      expect(dark, isNotEmpty);
+      expect(light, isNotEmpty);
+      expect(dark, isNot(equals(light)));
+    });
   });
 
   // ---------------------------------------------------------------------------

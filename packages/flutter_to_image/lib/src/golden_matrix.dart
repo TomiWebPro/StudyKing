@@ -234,6 +234,7 @@ Future<Map<String, Uint8List>> renderScreenGoldenMatrixFull(
   required List<Locale> locales,
   required List<Size> sizes,
   required List<ThemeMode> themeModes,
+  Brightness? brightness,
   double pixelRatio = kDefaultPixelRatio,
   double textScale = 1.0,
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
@@ -255,11 +256,70 @@ Future<Map<String, Uint8List>> renderScreenGoldenMatrixFull(
           textScale: textScale,
           localizationsDelegates: localizationsDelegates,
           supportedLocales: supportedLocales,
+          brightness: brightness,
         );
         results[path] = png;
       }
     }
   }
 
+  return results;
+}
+
+/// Renders [screenBuilder] (wrapped in a fresh [MaterialApp] per cell via
+/// [renderScreenToPng]) across a sweep of [textScales] and returns a map of
+/// golden-path → PNG bytes.
+///
+/// This is the screen-level counterpart of [renderGoldenTextScaleSweep].
+/// Unlike that helper — which calls [renderWidgetToPng] (bare Theme/MediaQuery,
+/// no MaterialApp) — this function calls [renderScreenToPng], so each cell gets
+/// a fresh `MaterialApp` root with proper Overlay, ScaffoldMessenger, and
+/// Localizations. The [screenBuilder] is invoked **once per text-scale cell**,
+/// producing a fresh widget tree each time; this avoids the "OverlayEntry
+/// already present in a different Overlay" error when a screen's AppBar
+/// contains a `Tooltip`/`PopupMenuButton`.
+///
+/// Every screen placed as `home` must already be wrapped in any needed
+/// `ProviderScope` / `Scaffold` ancestors by [screenBuilder] —
+/// [renderScreenToPng] only adds the `MaterialApp` root.
+///
+/// [pathBuilder] receives the locale, size, text-scale, and theme mode for each
+/// cell. Use [buildGoldenPathWithTextScale] for the conventional
+/// `test/goldens/<name>_<locale>_<width>x<textScale>_<theme>.png` path.
+///
+/// Must be called from within a `testWidgets` callback so that the
+/// `TestWidgetsFlutterBinding` is in the "in test" state (see
+/// [renderScreenToPng]).
+Future<Map<String, Uint8List>> renderScreenGoldenTextScaleSweep(
+  Widget Function(Locale locale, ThemeMode theme) screenBuilder, {
+  required Locale locale,
+  required Size size,
+  required List<double> textScales,
+  ThemeMode themeMode = ThemeMode.light,
+  double pixelRatio = kDefaultPixelRatio,
+  Brightness? brightness,
+  required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
+  required List<Locale> supportedLocales,
+  required TextScaleGoldenPathBuilder pathBuilder,
+}) async {
+  final results = <String, Uint8List>{};
+  if (textScales.isEmpty) {
+    return results;
+  }
+  for (final textScale in textScales) {
+    final path = pathBuilder(locale, size, textScale, themeMode);
+    final png = await renderScreenToPng(
+      screenBuilder(locale, themeMode),
+      size: size,
+      pixelRatio: pixelRatio,
+      locale: locale,
+      themeMode: themeMode,
+      textScale: textScale,
+      localizationsDelegates: localizationsDelegates,
+      supportedLocales: supportedLocales,
+      brightness: brightness,
+    );
+    results[path] = png;
+  }
   return results;
 }

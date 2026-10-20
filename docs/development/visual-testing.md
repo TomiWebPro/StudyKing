@@ -91,6 +91,7 @@ Future<Uint8List> renderScreenToPng(
   double textScale = 1.0,
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
   required List<Locale> supportedLocales,
+  Brightness? brightness,
 })
 ```
 
@@ -121,6 +122,10 @@ await renderScreenToPng(
   ...
 );
 ```
+
+The optional `brightness` parameter resolves `ThemeMode.system` to light or dark,
+mirroring `renderWidgetToPng`. It is ignored when `themeMode` is explicitly
+`ThemeMode.light` or `ThemeMode.dark`.
 
 ### `renderScreenToImageResult`
 
@@ -162,6 +167,7 @@ Future<Map<String, Uint8List>> renderScreenGoldenMatrixFull(
   required List<Locale> locales,
   required List<Size> sizes,
   required List<ThemeMode> themeModes,
+  Brightness? brightness,
   double pixelRatio = 2.0,
   double textScale = 1.0,
   required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
@@ -200,6 +206,39 @@ for (final entry in goldens.entries) {
 
 This replaces the manual `MaterialApp` + `renderWidgetToPng` loop documented
 below for screens that need an `Overlay`.
+
+### `renderScreenGoldenTextScaleSweep`
+
+Screen-level counterpart of `renderGoldenTextScaleSweep`. Use this to render a
+`MaterialApp`-rooted screen across a sweep of text scales (e.g. `1.0x`, `1.5x`,
+`2.0x`) for accessibility/regression coverage. Like `renderScreenGoldenMatrixFull`,
+it takes a `screenBuilder` invoked **once per cell** so `Overlay` entries never
+collide:
+
+```dart
+final sweeps = await renderScreenGoldenTextScaleSweep(
+  (locale, theme) => ProviderScope(
+    overrides: [studentIdValueProvider.overrideWithValue('test-student')],
+    child: const MyScreen(),
+  ),
+  locale: const Locale('en'),
+  size: const Size(1200, 800),
+  textScales: [1.0, 1.5, 2.0],
+  themeMode: ThemeMode.light,
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  pathBuilder: (locale, size, textScale, theme) =>
+      buildGoldenPathWithTextScale('my_screen', locale, size, textScale, theme),
+);
+for (final entry in sweeps.entries) {
+  expectLater(entry.value, matchesGoldenFile(entry.key));
+}
+```
+
+This replaces the manual per-scale `MaterialApp` + `renderWidgetToPng` loop that
+every screen golden test currently hand-rolls (see
+`test/features/mentor/presentation/mentor_screen_golden_test.dart:157` and
+`test/features/planner/presentation/planner_screen_golden_test.dart:187`).
 
 ---
 
@@ -423,8 +462,9 @@ String buildGoldenPathWithTextScale(
 Returns a path following the convention:
 `test/goldens/<name>_<locale>_<width>x<textScale>_<theme>.png`
 
-Used by `renderGoldenTextScaleSweep` to produce unique, sortable filenames
-for each text scale (e.g. `mentor_screen_en_1200x1.5_light.png`).
+Used by `renderGoldenTextScaleSweep` (widget-level) and
+`renderScreenGoldenTextScaleSweep` (screen-level) to produce unique, sortable
+filenames for each text scale (e.g. `mentor_screen_en_1200x1.5_light.png`).
 
 ---
 

@@ -548,4 +548,158 @@ void main() {
       expect(matrix, isEmpty);
     });
   });
+
+  group('renderScreenGoldenTextScaleSweep', () {
+    Widget tooltipScreen() {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Demo'),
+          actions: [
+            Tooltip(
+              message: 'Action',
+              child: const Icon(Icons.star),
+            ),
+          ],
+        ),
+        body: const Center(child: Text('Body')),
+      );
+    }
+
+    testWidgets('renders one PNG per textScale with distinct paths', (tester) async {
+      final result = await renderScreenGoldenTextScaleSweep(
+  (locale, theme) => tooltipScreen(),
+        locale: const Locale('en'),
+        size: const Size(375, 800),
+        textScales: [1.0, 1.5, 2.0],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, textScale, theme) =>
+            buildGoldenPathWithTextScale('sweep', locale, size, textScale, theme),
+      );
+
+      expect(result.length, 3);
+
+      for (final entry in result.entries) {
+        expect(entry.value, isNotEmpty);
+        expect(entry.value[0], 0x89);
+        expect(entry.value[1], 0x50);
+        expect(entry.value[2], 0x4E);
+        expect(entry.value[3], 0x47);
+        expect(entry.key, startsWith('test/goldens/sweep_en_375'));
+        expect(entry.key, endsWith('.png'));
+      }
+      expect(result.keys.where((k) => k.contains('x1.0')), hasLength(1));
+      expect(result.keys.where((k) => k.contains('x1.5')), hasLength(1));
+      expect(result.keys.where((k) => k.contains('x2.0')), hasLength(1));
+    });
+
+    testWidgets('returns empty map when textScales is empty', (tester) async {
+      final result = await renderScreenGoldenTextScaleSweep(
+  (locale, theme) => tooltipScreen(),
+        locale: const Locale('en'),
+        size: const Size(375, 800),
+        textScales: const [],
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, textScale, theme) =>
+            buildGoldenPathWithTextScale('empty', locale, size, textScale, theme),
+      );
+
+      expect(result, isEmpty);
+    });
+
+    testWidgets('builds a fresh screen per cell (Tooltip in AppBar does not crash)', (tester) async {
+      var buildCount = 0;
+      final result = await renderScreenGoldenTextScaleSweep(
+        (_, __) {
+          buildCount++;
+          return tooltipScreen();
+        },
+        locale: const Locale('en'),
+        size: const Size(375, 800),
+        textScales: [1.0, 2.0],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, textScale, theme) =>
+            buildGoldenPathWithTextScale('fresh', locale, size, textScale, theme),
+      );
+
+      expect(result.length, 2);
+      expect(buildCount, 2);
+      for (final entry in result.entries) {
+        expect(entry.value, isNotEmpty);
+      }
+    });
+
+    testWidgets('different text scales produce different byte lengths', (tester) async {
+      final small = await renderScreenGoldenTextScaleSweep(
+  (locale, theme) => tooltipScreen(),
+        locale: const Locale('en'),
+        size: const Size(200, 200),
+        textScales: [1.0],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, textScale, theme) =>
+            buildGoldenPathWithTextScale('small', locale, size, textScale, theme),
+      );
+
+      final large = await renderScreenGoldenTextScaleSweep(
+  (locale, theme) => tooltipScreen(),
+        locale: const Locale('en'),
+        size: const Size(200, 200),
+        textScales: [3.0],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, textScale, theme) =>
+            buildGoldenPathWithTextScale('large', locale, size, textScale, theme),
+      );
+
+      expect(small.values.first, isNotEmpty);
+      expect(large.values.first, isNotEmpty);
+      expect(small.values.first.length, isNot(equals(large.values.first.length)));
+    });
+
+    testWidgets('honors brightness for ThemeMode.system (dark vs light)', (tester) async {
+      final systemDark = await renderScreenGoldenTextScaleSweep(
+  (locale, theme) => tooltipScreen(),
+        locale: const Locale('en'),
+        size: const Size(100, 100),
+        textScales: [1.0],
+        themeMode: ThemeMode.system,
+        pixelRatio: 1.0,
+        brightness: Brightness.dark,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, textScale, theme) =>
+            buildGoldenPathWithTextScale('sys_dark', locale, size, textScale, theme),
+      );
+
+      final systemLight = await renderScreenGoldenTextScaleSweep(
+  (locale, theme) => tooltipScreen(),
+        locale: const Locale('en'),
+        size: const Size(100, 100),
+        textScales: [1.0],
+        themeMode: ThemeMode.system,
+        pixelRatio: 1.0,
+        brightness: Brightness.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, textScale, theme) =>
+            buildGoldenPathWithTextScale('sys_light', locale, size, textScale, theme),
+      );
+
+      expect(systemDark.values.first, isNotEmpty);
+      expect(systemLight.values.first, isNotEmpty);
+      expect(systemDark.values.first, isNot(equals(systemLight.values.first)));
+    });
+  });
 }

@@ -3,8 +3,9 @@
 /// Exports the public rendering API: [renderWidgetToPng],
 /// [renderScreenToPng], [renderWidgetToImageResult],
 /// [renderScreenToImageResult], [ImageResult], and the golden-matrix
-/// helpers [renderGoldenMatrix], [renderGoldenMatrixFull], and
-/// [renderGoldenTextScaleSweep].
+/// helpers [renderGoldenMatrix], [renderGoldenMatrixFull],
+/// [renderGoldenTextScaleSweep], [renderScreenGoldenMatrixFull], and
+/// [renderScreenGoldenTextScaleSweep].
 library;
 
 export 'src/renderer.dart';
