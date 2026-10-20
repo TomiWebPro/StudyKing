@@ -172,6 +172,8 @@ class FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   String? lastStudentId;
   int? lastActualMinutes;
   int? lastActualQuestions;
+  int checkAdherenceCallCount = 0;
+  String? lastCheckAdherenceStudentId;
 
   FakePlanAdherenceOrchestrator() : super();
 
@@ -188,11 +190,20 @@ class FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
     lastActualQuestions = actualQuestions;
     return Result.success(null);
   }
+
+  @override
+  Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
+    checkAdherenceCallCount++;
+    lastCheckAdherenceStudentId = studentId;
+    return Result.success(const AdherenceDeviation());
+  }
 }
 
 class FakeMasteryGraphService extends MasteryGraphService {
   final List<Map<String, dynamic>> recordedAttempts = [];
   List<MasteryState> weakTopicsToReturn = [];
+  int getWeakTopicsCallCount = 0;
+  String? lastGetWeakTopicsStudentId;
 
   FakeMasteryGraphService();
 
@@ -201,6 +212,8 @@ class FakeMasteryGraphService extends MasteryGraphService {
     String studentId, {
     String? subjectId,
   }) async {
+    getWeakTopicsCallCount++;
+    lastGetWeakTopicsStudentId = studentId;
     return Result.success(List<MasteryState>.from(weakTopicsToReturn));
   }
 
@@ -1638,6 +1651,327 @@ void main() {
         }
 
         realExecutor.dispose();
+      });
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // Task reconstruction after restore (Vision Next-Term §4.1/§4.2).
+    // When the app restarts, idle tasks restored from the Hive box arrive
+    // with taskFn == null (closures can't be serialised). The TutorService's
+    // TaskReconstructor — registered when llmAgent is attached — must rebuild
+    // the executable closure from the task's payload (kind + studentId) so
+    // the task actually runs instead of being silently drained as a no-op.
+    // ─────────────────────────────────────────────────────────────
+    group('task reconstruction after restore', () {
+      test(
+          'set llmAgent registers a TaskReconstructor that rebuilds '
+          'lesson_prep closures instead of draining them as no-ops', () async {
+        var shouldDefer = true;
+        final taskManager = LlmTaskManager();
+        final executor = IdleExecutor(
+          llmTaskManager: taskManager,
+          shouldDeferForQuietHours: (_) => shouldDefer,
+        );
+
+        final llmAgent = LlmAgent(
+          loop: FakeAgentLoop(),
+          toolRegistry: ToolRegistry(),
+          memoryStore: FakeAgentMemoryStore(),
+          idleExecutor: executor,
+          studentId: 'student-1',
+        );
+
+        // TutorService with a fake prep tool so we can verify the reconstructed
+        // closure actually calls through to PreGenerateLessonTool.execute.
+        final fakeLessonRepo = FakeLessonRepository();
+        final fakeTool = FakePreGenerateLessonTool(
+          lessonRepository: fakeLessonRepo,
+        );
+        final fakeTopicRepo = FakeTopicRepository();
+        fakeTopicRepo.setTopic(Topic(
+          id: 'weak_topic',
+          subjectId: 'math',
+          title: 'Weak Topic',
+          description: '',
+          syllabusText: '',
+        ));
+
+        masteryService.weakTopicsToReturn = [
+          MasteryState(
+            studentId: 'student-1',
+            topicId: 'weak_topic',
+            subjectId: 'math',
+            lastAttempt: DateTime.now(),
+            lastUpdated: DateTime.now(),
+          ),
+        ];
+
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          lessonRepository: fakeLessonRepo,
+          topicRepository: fakeTopicRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+          preGenerateLessonTool: fakeTool,
+        );
+
+        // Setting llmAgent must register the TaskReconstructor.
+        service.llmAgent = llmAgent;
+
+        // Start + end a lesson so _enqueueBackgroundTasks enqueues three tasks,
+        // all deferred by quiet-hours (shouldDefer = true).
+        final mgr = await service.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          localeName: 'en',
+        );
+        await mgr.sendMessage('Hello').toList();
+        await service.endLesson();
+
+        // Flush fire-and-forget enqueue calls.
+        await Future.delayed(Duration.zero);
+        await Future.delayed(Duration.zero);
+
+        expect(executor.queue.length, equals(3));
+
+        // Simulate process restart: closures are not serialised, so null them
+        // out — the TaskReconstructor must rebuild them at execution time.
+        for (final task in executor.queue) {
+          task.taskFn = null;
+        }
+
+        // Release quiet-hours so deferred tasks can run.
+        shouldDefer = false;
+
+        // Drain the queue — each task should be reconstructed by the
+        // TaskReconstructor, NOT drained as a no-op.
+        while (executor.hasPendingTasks) {
+          await executor.processNext();
+          await Future.delayed(Duration.zero);
+        }
+
+        final nextTopicTask = executor.queue.firstWhere(
+          (t) => t.description == 'Next topic lesson prep',
+        );
+        // The task was reconstructed and executed, not silently drained.
+        expect(nextTopicTask.isCompleted, isTrue);
+        expect(nextTopicTask.error, isNull,
+            reason: 'Reconstructed lesson_prep task should succeed');
+        // The pre-generate tool was actually invoked by the reconstructed
+        // closure — proving the closure was rebuilt, not drained.
+        expect(fakeTool.executedArgs, isNotEmpty);
+        expect(fakeTool.executedArgs.first['topicId'], equals('weak_topic'));
+        expect(fakeTool.executedArgs.first['subjectId'], equals('math'));
+
+        executor.dispose();
+      });
+
+      test(
+          'restored background task (adherence check) is reconstructed and '
+          'executed — not drained as a no-op', () async {
+        var shouldDefer = true;
+        final taskManager = LlmTaskManager();
+        final executor = IdleExecutor(
+          llmTaskManager: taskManager,
+          shouldDeferForQuietHours: (_) => shouldDefer,
+        );
+
+        final llmAgent = LlmAgent(
+          loop: FakeAgentLoop(),
+          toolRegistry: ToolRegistry(),
+          memoryStore: FakeAgentMemoryStore(),
+          idleExecutor: executor,
+          studentId: 'student-1',
+        );
+
+        final fakePlan = FakePlanAdherenceOrchestrator();
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          planOrchestrator: fakePlan,
+        );
+
+        service.llmAgent = llmAgent;
+
+        final mgr = await service.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          localeName: 'en',
+        );
+        await mgr.sendMessage('Hello').toList();
+        await service.endLesson();
+
+        await Future.delayed(Duration.zero);
+        await Future.delayed(Duration.zero);
+
+        expect(executor.queue.length, equals(3));
+
+        // Simulate process restart: null out all closures.
+        for (final task in executor.queue) {
+          task.taskFn = null;
+        }
+
+        shouldDefer = false;
+
+        while (executor.hasPendingTasks) {
+          await executor.processNext();
+          await Future.delayed(Duration.zero);
+        }
+
+        // The adherence check task was reconstructed and checkAdherence was
+        // actually called on the plan orchestrator — not silently drained.
+        final adherenceTask = executor.queue.firstWhere(
+          (t) => t.description == 'Post-lesson adherence update',
+        );
+        expect(adherenceTask.isCompleted, isTrue);
+        expect(adherenceTask.error, isNull);
+        expect(fakePlan.checkAdherenceCallCount, equals(1));
+        expect(fakePlan.lastCheckAdherenceStudentId, equals('student-1'));
+
+        executor.dispose();
+      });
+
+      test(
+          'restored background task (weak topic reanalysis) is reconstructed '
+          'and executed — not drained as a no-op', () async {
+        var shouldDefer = true;
+        final taskManager = LlmTaskManager();
+        final executor = IdleExecutor(
+          llmTaskManager: taskManager,
+          shouldDeferForQuietHours: (_) => shouldDefer,
+        );
+
+        final llmAgent = LlmAgent(
+          loop: FakeAgentLoop(),
+          toolRegistry: ToolRegistry(),
+          memoryStore: FakeAgentMemoryStore(),
+          idleExecutor: executor,
+          studentId: 'student-1',
+        );
+
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+        );
+
+        service.llmAgent = llmAgent;
+
+        final mgr = await service.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          localeName: 'en',
+        );
+        await mgr.sendMessage('Hello').toList();
+        await service.endLesson();
+
+        await Future.delayed(Duration.zero);
+        await Future.delayed(Duration.zero);
+
+        expect(executor.queue.length, equals(3));
+
+        // Simulate process restart: null out all closures.
+        for (final task in executor.queue) {
+          task.taskFn = null;
+        }
+
+        shouldDefer = false;
+
+        while (executor.hasPendingTasks) {
+          await executor.processNext();
+          await Future.delayed(Duration.zero);
+        }
+
+        final weakTopicTask = executor.queue.firstWhere(
+          (t) => t.description == 'Post-lesson weak topic reanalysis',
+        );
+        expect(weakTopicTask.isCompleted, isTrue);
+        expect(weakTopicTask.error, isNull);
+        // The reconstructor called getWeakTopics on the mastery service.
+        expect(masteryService.getWeakTopicsCallCount, greaterThan(0));
+
+        executor.dispose();
+      });
+
+      test(
+          'restored task with no recognisable payload is drained gracefully '
+          '(no crash)', () async {
+        var shouldDefer = true;
+        final taskManager = LlmTaskManager();
+        final executor = IdleExecutor(
+          llmTaskManager: taskManager,
+          shouldDeferForQuietHours: (_) => shouldDefer,
+        );
+
+        final llmAgent = LlmAgent(
+          loop: FakeAgentLoop(),
+          toolRegistry: ToolRegistry(),
+          memoryStore: FakeAgentMemoryStore(),
+          idleExecutor: executor,
+          studentId: 'student-1',
+        );
+
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+        );
+
+        service.llmAgent = llmAgent;
+
+        // Enqueue a task with NO payload — simulating a task type the
+        // reconstructor doesn't recognise (e.g. from an older app version).
+        await service.llmAgent!.enqueuePrepTask(
+          'Unknown prep task',
+          () async => {'success': true},
+          requiresHeavy: false,
+          feature: PrepCategory.background.taskTypeKey,
+          taskType: PrepCategory.background.taskTypeKey,
+        );
+
+        await Future.delayed(Duration.zero);
+        expect(executor.queue.length, equals(1));
+
+        // Simulate restart: null out the closure.
+        executor.queue.first.taskFn = null;
+
+        shouldDefer = false;
+        await executor.processNext();
+        await Future.delayed(Duration.zero);
+
+        // Unknown task → reconstructor returns null → drained as no-op
+        // (graceful, not a crash).
+        final task = executor.queue.first;
+        expect(task.isCompleted, isTrue);
+        expect(task.error, isNull);
+
+        executor.dispose();
       });
     });
 

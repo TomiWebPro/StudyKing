@@ -25,6 +25,8 @@ import 'package:studyking/features/teaching/data/repositories/lesson_recap_repos
 import 'package:studyking/features/teaching/services/lesson_recap_service.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm_agent/llm_agent.dart';
+import 'package:studyking/core/services/llm_agent/idle_executor.dart'
+    show IdleTask, TaskReconstructor;
 import 'package:studyking/core/services/prep_budget.dart' show PrepCategory;
 import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
 import 'package:studyking/core/utils/study_utils.dart';
@@ -107,13 +109,13 @@ class TutorService {
             ),
         _planOrchestrator = planOrchestrator ?? PlanAdherenceOrchestrator(),
         _voiceService = voiceService,
-        _llmAgent = llmAgent,
         _longTermMemory = longTermMemory,
         _feedbackRepository = feedbackRepository ?? LessonFeedbackRepository(),
         _plannerService = plannerService,
         _preGenerateLessonTool = preGenerateLessonTool,
         _topicRepository = topicRepository ?? TopicRepository(),
         _clock = clock ?? SystemClock() {
+    _attachLlmAgent(llmAgent);
     _feedbackAnalyzer = FeedbackAnalyzer(_feedbackRepository);
   }
 
@@ -121,7 +123,105 @@ class TutorService {
 
   List<LessonBlock>? get currentLessonBlocks => _currentLessonBlocks;
 
-  set llmAgent(LlmAgent? agent) => _llmAgent = agent;
+  LlmAgent? get llmAgent => _llmAgent;
+
+  set llmAgent(LlmAgent? agent) => _attachLlmAgent(agent);
+
+  /// Stores the [LlmAgent] and, when non-null, registers a
+  /// [TaskReconstructor] on its [IdleExecutor] so that post-lesson prep tasks
+  /// restored from persistence (which arrive with `taskFn == null`) are
+  /// re-attached to their executable closures instead of being silently
+  /// drained as no-ops (Vision Next-Term §4.1/§4.2 "Prepare while I'm away").
+  ///
+  /// Called both from the constructor (when [LlmAgent] is injected at
+  /// construction time) and from the [llmAgent] setter (when TutorScreen
+  /// wires the agent after provider creation). Mirrors the IngestionProvider
+  /// pattern at `bulk_ingestion_service.dart:328-349`.
+  void _attachLlmAgent(LlmAgent? agent) {
+    _llmAgent = agent;
+    if (agent != null) {
+      _registerPrepTaskReconstructor(agent);
+    }
+  }
+
+  /// Builds and registers a [TaskReconstructor] on [agent]'s [IdleExecutor]
+  /// that re-attaches executable closures for the three post-lesson prep task
+  /// kinds encoded in each task's `payload` JSON:
+  /// - `adherence_check` → [_planOrchestrator.checkAdherence]
+  /// - `weak_topic_reanalysis` → [_masteryService.getWeakTopics]
+  /// - `next_topic_lesson_prep` → [generateNextTopicLesson]
+  ///
+  /// Each task carries a `studentId` (and `subjectId` for lesson_prep) in its
+  /// payload, so the reconstructed closure can re-run the same service method
+  /// that originally enqueued the task — without the original `TutorSession`,
+  /// which cannot survive process termination.
+  void _registerPrepTaskReconstructor(LlmAgent agent) {
+    agent.idleExecutor.setTaskReconstructor((IdleTask task) {
+      final payload = task.payload;
+      if (payload == null) return null;
+
+      String? kind;
+      String? studentId;
+      try {
+        final json = jsonDecode(payload) as Map<String, dynamic>;
+        kind = json['kind'] as String?;
+        studentId = json['studentId'] as String?;
+      } catch (e) {
+        _logger.w('Failed to parse prep task payload: $payload', e);
+        return null;
+      }
+
+      if (kind == null || studentId == null) return null;
+
+      final sid = studentId;
+      final orchestrator = _planOrchestrator;
+      final mastery = _masteryService;
+
+      switch (kind) {
+        case 'adherence_check':
+          return () async {
+            try {
+              await orchestrator.checkAdherence(sid);
+            } catch (e) {
+              _logger.w('Restored adherence check failed', e);
+              rethrow;
+            }
+          };
+        case 'weak_topic_reanalysis':
+          return () async {
+            try {
+              await mastery.getWeakTopics(sid);
+            } catch (e) {
+              _logger.w('Restored weak topic reanalysis failed', e);
+              rethrow;
+            }
+          };
+        case 'next_topic_lesson_prep':
+          final subjectId = task.subjectId;
+          if (subjectId == null) return null;
+          final self = this;
+          final session = TutorSession(
+            id: 'restored_${DateTime.now().millisecondsSinceEpoch}',
+            studentId: studentId,
+            subjectId: subjectId,
+            topicId: '',
+            topicTitle: '',
+            startTime: _clock.now(),
+          );
+          return () async {
+            final result = await self.generateNextTopicLesson(session);
+            final success = result['success'] as bool? ?? false;
+            if (!success) {
+              throw Exception(
+                result['error'] ?? result['message'] ?? 'Lesson prep returned failure',
+              );
+            }
+          };
+        default:
+          return null;
+      }
+    });
+  }
 
   int _getDefaultDurationMinutes() {
     try {
@@ -535,6 +635,10 @@ class TutorService {
       // generic background prep bucket so the task manager + budget reflect it.
       feature: PrepCategory.background.taskTypeKey,
       taskType: PrepCategory.background.taskTypeKey,
+      // Vision Next-Term §4.1: payload carries the task kind + studentId so the
+      // TaskReconstructor can rebuild this closure after a restart (closures
+      // are not serialised to Hive).
+      payload: jsonEncode({'kind': 'adherence_check', 'studentId': studentId}),
     );
   }
 
@@ -553,6 +657,9 @@ class TutorService {
       requiresHeavy: true,
       feature: PrepCategory.background.taskTypeKey,
       taskType: PrepCategory.background.taskTypeKey,
+      // Vision Next-Term §4.1: payload carries the task kind + studentId so the
+      // TaskReconstructor can rebuild this closure after a restart.
+      payload: jsonEncode({'kind': 'weak_topic_reanalysis', 'studentId': studentId}),
     );
   }
 
@@ -658,6 +765,13 @@ class TutorService {
       // Vision §4.2: bind the task to the lesson's subject so the
       // IdleExecutor can skip prep when the student has paused that syllabus.
       subjectId: session.subjectId,
+      // Vision Next-Term §4.1: payload carries the task kind + studentId so
+      // the TaskReconstructor can rebuild this closure after a restart (the
+      // TutorSession cannot survive process termination).
+      payload: jsonEncode({
+        'kind': 'next_topic_lesson_prep',
+        'studentId': session.studentId,
+      }),
     );
   }
 

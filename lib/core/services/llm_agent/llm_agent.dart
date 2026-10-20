@@ -101,6 +101,8 @@ class LlmAgent {
     String? subjectId,
     int estimatedInputTokens = 0,
     int estimatedOutputTokens = 0,
+    String? jobId,
+    String? payload,
   }) {
     return _idleExecutor.enqueuePrepTool(
       description,
@@ -111,6 +113,8 @@ class LlmAgent {
       subjectId: subjectId,
       estimatedInputTokens: estimatedInputTokens,
       estimatedOutputTokens: estimatedOutputTokens,
+      jobId: jobId,
+      payload: payload,
     );
   }
 
