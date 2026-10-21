@@ -39,12 +39,12 @@
 | Context needed | Injected? | File |
 |---|---|---|
 | Current mastery state (weak topics, accuracy) | YES | `mentor_context_builder.dart:195-200` — `_loadWeakTopics` → `getWeakTopics` |
-| Readiness scores per topic | PARTIAL | `readiness_scorer.dart:16` — used in `CreatePracticeSessionTool` but not injected into mentor context prompt |
-| Past session results (mistakes, time spent) | NO | `session_repository.dart` has session data but mentor context builder does not inject past session accuracy |
+| Readiness scores per topic | YES | `readiness_scorer.dart:16` — `ReadinessScorer.topicReadiness` injected into mentor context via `MentorContextBuilder._loadTopicReadiness()` (lines 300-321 in `mentor_context_builder.dart`) |
+| Past session results (mistakes, time spent) | YES | `mentor_context_builder.dart:323-335` — `_buildMistakeLines()` injects per-question accuracy snapshot; `mentor_context_builder.dart:337-369` injects today's study time + per-subject breakdown |
 | Lesson history (remediation links) | YES | `mentor_context_builder.dart` — `loadUpcomingLessons`; `get_lesson_history_tool.dart` available |
 
-**Gap:** Past session accuracy and readiness scores are not injected into the mentor context prompt.
-→ File `issues/open/scenario-practice-readiness-not-injected.md`
+**Gap:** None for context injection. Remaining PARTIAL (Steps 3 & 5): no dedicated review-mistakes UI — the `ReviewMistakesTool` agent tool exists but lacks a student-facing review screen.
+→ File `issues/open/scenario-review-mistakes-ui-missing.md`
 
 ## Comprehension rubric
 
@@ -64,12 +64,12 @@ Traced against code at:
 `lib/core/data/models/mastery_state_model.dart:1`.
 
 - Step 1: PASS — `CreatePracticeSessionTool` is registered and callable from the agent.
-- Step 2: PARTIAL — readiness scoring exists but does not feed back into the LLM context.
+- Step 2: PASS — readiness scoring feeds back into the LLM context via `MentorContextBuilder` (readiness scores + recent accuracy trend injected at `mentor_context_builder.dart:300-321`).
 - Step 3: PARTIAL — no dedicated review-mistakes tool or view.
 - Step 4: PASS — `get_weak_topics` + `schedule_lesson` are reachable through AgentLoop.
 - Step 5: PARTIAL — mastery model tracks stats but review UI is sparse.
 
 Tool audit: 6 of 6 needed tools exist; `review_mistakes` is FOUND.
 RESULT: all needed tools available (0 missing).
-Context audit: readiness scores and past session accuracy not injected → open issue (`scenario-practice-readiness-not-injected.md`).
-**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `llm_agent_providers.dart:318`, `review_mistakes_tool.dart:22`).
+Context audit: readiness scores, recent accuracy trend, and per-question mistake snapshot all injected into mentor context (`mentor_context_builder.dart:300-335`).
+**Last re-traced:** 2026-10-21 against current HEAD (`mentor_context_builder_test.dart` readiness-scores group, lines 1640-1706).

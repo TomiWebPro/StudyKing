@@ -32,18 +32,18 @@
 | `schedule_lesson` (book remedial lesson) | YES | `lib/features/mentor/services/tools/schedule_lesson_tool.dart` |
 | `review_mistakes` (detailed mistake review UI) | YES | `lib/features/mentor/services/tools/review_mistakes_tool.dart` — returns wrong answers with markscheme explanations and linked concepts, reachable through AgentLoop. |
 
-**Gap:** None for conversational review — the `review_mistakes` agent tool is now registered in `llmAgentToolsProvider`. (Per-question accuracy and variant availability are still not injected into mentor context.)
+**Gap:** None for conversational review — the `review_mistakes` agent tool is now registered in `llmAgentToolsProvider`. (Per-question accuracy and variant availability are now injected into mentor context — see Context audit below.)
 
 ### Context the LLM needs vs. what AgentLoop injects
 
 | Context needed | Injected? | File |
 |---|---|---|
-| Session accuracy by question/concept | NO | `study_progress_tracker.dart` tracks sessions but mentor context does not inject per-question accuracy. |
-| Variant availability (already generated variants for this concept) | NO | `question_variant_service.dart` generates variants but mentor context does not know which variants exist for a concept. |
+| Session accuracy by question/concept | YES | `mentor_context_builder.dart:323-335` — `_buildMistakeLines()` injects per-question accuracy snapshot with concept labels resolved from `QuestionRepository` |
+| Variant availability (already generated variants for this concept) | YES | `mentor_context_builder.dart:522` — variant count injected per-question in the mistakes block |
 | Remediation history (prior review attempts) | YES | `get_lesson_history_tool.dart` shows past lessons. `conversation_repository.dart` persists conversation data. |
 
-**Gap:** Per-question accuracy and variant availability are not injected into mentor context.
-→ File `issues/open/scenario-practice-readiness-not-injected.md`
+**Gap:** None for context injection. Remaining PARTIAL (Steps 2 & 3): no dedicated review-mistakes UI — the `ReviewMistakesTool` agent tool exists but lacks a student-facing review screen; variants are enqueued, not immediately served.
+→ File `issues/open/scenario-review-mistakes-ui-missing.md`
 
 ## Comprehension rubric
 
@@ -64,10 +64,11 @@ Traced against code at:
 
 - Step 1: PASS — session summary stats are available via `get_student_stats`.
 - Step 2: PARTIAL — markscheme explanations exist but no dedicated review-mistakes UI.
-- Step 3: PARTIAL — variants are enqueued but not immediately served for remediation.
+- Step 3: PARTIAL — variants are enqueued but not immediately served for remediation; however, the `review_mistakes` agent tool IS registered (`llm_agent_providers.dart:318`) and traced in `tool_trace_coverage_test.dart`, returning wrong answers with markscheme explanations and linked concepts.
 - Step 4: PASS — `get_weak_topics` + `create_practice_session` + `schedule_lesson` all reachable.
 - Step 5: PASS — `RefreshMasteryTool` + MasteryGraphService update mastery state.
 
 Tool audit: 6 of 6 needed tools exist; `review_mistakes` is FOUND.
 RESULT: all needed tools available (0 missing).
-**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `review_mistakes_tool.dart:22`, `llm_agent_providers.dart:318`).
+Context audit: per-question accuracy + variant availability now injected into mentor context (`mentor_context_builder.dart:323-335`).
+**Last re-traced:** 2026-10-21 against current HEAD (`mentor_context_builder_test.dart` recent-mistakes + readiness groups).
