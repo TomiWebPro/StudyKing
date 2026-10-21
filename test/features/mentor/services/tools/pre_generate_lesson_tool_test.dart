@@ -1,10 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
+import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/core/services/prep_budget.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
@@ -109,6 +111,25 @@ Lesson _buildTestLesson({
     generatedBy: GeneratedBy.ai,
     createdAt: DateTime.now(),
   );
+}
+
+/// Hand-written fake [NotificationService] that records [showLessonReady]
+/// invocations instead of touching the platform channel, used to verify the
+/// prep-to-live handoff notification (Vision Next-Term §4.1).
+class FakeNotificationService extends NotificationService {
+  final List<({int id, String topicTitle, String lessonId})> lessonReadyCalls =
+      [];
+
+  @override
+  Future<Result<void>> showLessonReady({
+    required int id,
+    required String topicTitle,
+    required String lessonId,
+  }) async {
+    lessonReadyCalls
+        .add((id: id, topicTitle: topicTitle, lessonId: lessonId));
+    return Result.success(null);
+  }
 }
 
 void main() {
@@ -296,6 +317,72 @@ void main() {
 
         expect(fakeService.lastFeature, 'lesson_prep');
         expect(fakeService.lastTaskType, PrepCategory.lessonPrep.taskTypeKey);
+      });
+    });
+
+    // Vision Next-Term §4.1/§4.3 + agent_must_read.md:98 ("lesson
+    // notifications"): when off-period pre-generation produces a structured
+    // lesson, the student must be proactively notified that it is ready —
+    // otherwise the prep-to-live handoff is invisible (this issue's gap).
+    group('lesson-ready notification', () {
+      test('fires showLessonReady exactly once with topic title and lesson id',
+          () async {
+        final notif = FakeNotificationService();
+        fakeService.onGenerateLesson = ({
+          required String subjectId,
+          required String topicId,
+          required String topicTitle,
+          String localeName = 'en',
+          String feature = 'lesson_agent',
+          String? taskType,
+        }) async {
+          return _buildTestLesson(
+            subjectId: subjectId,
+            topicId: topicId,
+            topicTitle: topicTitle,
+          );
+        };
+
+        final tool = PreGenerateLessonTool(
+          lessonAgentService: fakeService,
+          notificationService: notif,
+        );
+        final result = await tool.execute({
+          'subjectId': 'subj-1',
+          'topicId': 'topic-1',
+          'topicTitle': 'Algebra Basics',
+        });
+
+        expect(result['success'], isTrue);
+        // §4.1 handoff: proactive notification fires once with the correct
+        // topic title and lesson id.
+        expect(notif.lessonReadyCalls.length, 1);
+        expect(notif.lessonReadyCalls.single.topicTitle, 'Algebra Basics');
+        expect(notif.lessonReadyCalls.single.lessonId, 'lesson-123');
+        // Solidification criteria #4: idempotent per lesson id — the
+        // notification id is derived from the lesson id, not a monotonic
+        // counter, so a re-run of prep replaces instead of stacking duplicates.
+        expect(
+          notif.lessonReadyCalls.single.id,
+          equals(NotificationService.lessonReadyNotificationId('lesson-123')),
+        );
+      });
+
+      test('does not fire lesson-ready notification when generation returns null',
+          () async {
+        final notif = FakeNotificationService();
+        final tool = PreGenerateLessonTool(
+          lessonAgentService: fakeService,
+          notificationService: notif,
+        );
+        final result = await tool.execute({
+          'subjectId': 'subj-1',
+          'topicId': 'topic-1',
+          'topicTitle': 'Algebra Basics',
+        });
+
+        expect(result['success'], isFalse);
+        expect(notif.lessonReadyCalls, isEmpty);
       });
     });
 

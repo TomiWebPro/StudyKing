@@ -1,5 +1,6 @@
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
+import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/core/services/prep_budget.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
@@ -20,16 +21,19 @@ class PreGenerateLessonTool extends PrepTool {
   // ignore: unused_field
   final LlmUsageMeter? _usageMeter;
   final PrepBudgetService? _budgetService;
+  final NotificationService? _notificationService;
 
   PreGenerateLessonTool({
     required LessonAgentService lessonAgentService,
     LlmTaskManager? taskManager,
     LlmUsageMeter? usageMeter,
     PrepBudgetService? budgetService,
+    NotificationService? notificationService,
   })  : _lessonAgentService = lessonAgentService,
         _taskManager = taskManager,
         _usageMeter = usageMeter,
-        _budgetService = budgetService;
+        _budgetService = budgetService,
+        _notificationService = notificationService;
 
   @override
   String get name => 'pre_generate_lesson';
@@ -148,6 +152,25 @@ class PreGenerateLessonTool extends PrepTool {
 
       if (lesson == null) {
         return {'success': false, 'message': 'Failed to generate lesson'};
+      }
+
+      // Vision Next-Term §4.1/§4.3 + agent_must_read.md:98 ("lesson
+      // notifications"): when a pre-built lesson becomes available,
+      // proactively notify the student so off-period prep is surfaced
+      // instead of discovered by chance. The id is derived from the lesson
+      // id so re-running prep replaces (never stacks) the notification.
+      if (_notificationService != null && lesson.id.isNotEmpty) {
+        final notifResult = await _notificationService.showLessonReady(
+          id: NotificationService.lessonReadyNotificationId(lesson.id),
+          topicTitle: topicTitle,
+          lessonId: lesson.id,
+        );
+        if (notifResult.isFailure) {
+          _logger.w(
+            'Failed to show lesson-ready notification for ${lesson.id}',
+            notifResult.error,
+          );
+        }
       }
 
       return {

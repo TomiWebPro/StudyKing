@@ -457,6 +457,21 @@ class NotificationService {
     return NotificationIds.lessonReminderBase + hash;
   }
 
+  /// Derives a stable OS notification ID for a "lesson ready" notification
+  /// from the lesson id (see [lessonNotificationId] for the hashing rationale).
+  ///
+  /// Using a deterministic id — rather than a monotonic counter — makes the
+  /// notification idempotent per lesson: re-running off-period prep for the
+  /// same lesson replaces the previous "lesson ready" notification instead of
+  /// stacking duplicates (Vision Next-Term §4.1 prep-to-live handoff).
+  static int lessonReadyNotificationId(String lessonId) {
+    var hash = 5381;
+    for (final c in lessonId.codeUnits) {
+      hash = ((hash << 5) + hash + c) & 0x7FFFFFFF;
+    }
+    return NotificationIds.lessonReadyBase + hash;
+  }
+
   /// Schedules a one-shot OS-level lesson-reminder alarm via
   /// `zonedSchedule` so it fires while the app is backgrounded or
   /// terminated — independent of the foreground `EngagementScheduler` timer.

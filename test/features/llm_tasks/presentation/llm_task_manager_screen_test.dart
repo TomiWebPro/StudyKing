@@ -1103,6 +1103,50 @@ void main() {
       expect(find.textContaining('Type:'), findsNothing);
     });
 
+    // Vision Next-Term §0/§4.2: prep jobs promoted to LlmTasks must carry their
+    // human-readable description so the portal tells the student what the
+    // off-period prep is actually doing (not just "Type: lesson_prep").
+    testWidgets('task card displays human-readable description when present',
+        (tester) async {
+      final id = manager.createTask(
+        feature: 'lesson_prep',
+        modelId: 'gpt-4',
+        taskType: 'lesson_prep',
+        description: 'Pre-generate lesson: Organic Chemistry Chapter 3',
+      );
+      manager.startTask(id);
+      manager.completeTask(id);
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      expect(
+        find.text('Pre-generate lesson: Organic Chemistry Chapter 3'),
+        findsOneWidget,
+      );
+      // When a description is present, the raw taskType label is suppressed in
+      // favour of the human-readable line (legacy tasks without a description
+      // still show the "Type:" fallback).
+      expect(find.text('Type: lesson_prep'), findsNothing);
+    });
+
+    testWidgets('task card falls back to taskType when description is null',
+        (tester) async {
+      final id = manager.createTask(
+        feature: 'lesson_prep',
+        modelId: 'gpt-4',
+        taskType: 'lesson_prep',
+      );
+      manager.startTask(id);
+      manager.completeTask(id);
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      // Legacy task (no description) still shows the "Type:" fallback label.
+      expect(find.text('Type: lesson_prep'), findsOneWidget);
+    });
+
     // =====================
     // TASK-TYPE FILTER
     // =====================

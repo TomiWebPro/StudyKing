@@ -422,6 +422,35 @@ void main() {
       expect(manager.tasks.any((t) => t.status == LlmTaskStatus.done), isTrue);
     });
 
+    // Vision Next-Term §0 token principle / §4.2: students must be able to see
+    // WHERE prep tokens go. The IdleExecutor must propagate the human-readable
+    // IdleTask.description onto the parent LlmTask so the task-manager portal
+    // can tell the student what the running/done prep job was actually for
+    // (e.g. "Pre-generate lesson: Organic Chemistry Chapter 3").
+    test('propagates IdleTask.description onto the parent LlmTask', () async {
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(llmTaskManager: manager);
+
+      await executor.enqueuePrepTool(
+        'Pre-generate lesson: Organic Chemistry Chapter 3',
+        () async => {'success': true, 'lessonId': 'l1'},
+        requiresHeavy: true,
+        feature: 'lesson_prep',
+        taskType: 'lesson_prep',
+      );
+
+      final task = manager.tasks.single;
+      expect(task.feature, 'lesson_prep');
+      expect(task.taskType, 'lesson_prep');
+      expect(
+        task.description,
+        'Pre-generate lesson: Organic Chemistry Chapter 3',
+        reason: 'description must reach the LlmTask so the portal can label it',
+      );
+
+      executor.dispose();
+    });
+
     test('light prep tool is not deferred by system monitor', () async {
       final monitor = MutableFakeSystemMonitorService(
         canRunHeavyPrepNowValue: false,

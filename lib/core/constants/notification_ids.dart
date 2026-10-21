@@ -16,4 +16,10 @@ class NotificationIds {
   /// rolling `_notificationIdCounter` (1000+) and the daily-reminder id (9999)
   /// to avoid id collisions with recurring nudges.
   static const int lessonReminderBase = 1000000;
+
+  /// Base id for "lesson ready" notifications. Derived from the lesson id
+  /// (see `NotificationService.lessonReadyNotificationId`) so a re-run of
+  /// prep for the same lesson replaces — rather than stacks — the previous
+  /// notification (Vision Next-Term §4.1 prep-to-live handoff).
+  static const int lessonReadyBase = 2000000;
 }

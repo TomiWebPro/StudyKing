@@ -512,6 +512,11 @@ class IdleExecutor {
           feature: next.feature ?? 'idle_executor',
           modelId: 'background',
           taskType: next.taskType ?? LlmTaskType.background.name,
+          // Propagate the human-readable IdleTask.description onto the parent
+          // LlmTask (Vision Next-Term §0 token principle / §4.2 visibility):
+          // the task-manager portal needs it to tell students WHAT the off-period
+          // prep is doing, not just that a "background/background" job is running.
+          description: next.description,
         ) ??
         '';
     if (taskId.isNotEmpty) manager?.startTask(taskId);

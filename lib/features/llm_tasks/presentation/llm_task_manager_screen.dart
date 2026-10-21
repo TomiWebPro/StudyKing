@@ -574,7 +574,19 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (task.taskType != null)
+                      // Vision Next-Term §0/§4.2: surface the human-readable
+                      // description (e.g. "Pre-generate lesson: Organic Chemistry
+                      // Chapter 3") so students can see WHERE their prep tokens go.
+                      // Fall back to the raw taskType only for legacy tasks that
+                      // carry no description.
+                      if (task.description != null)
+                        Text(
+                          task.description!,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        )
+                      else if (task.taskType != null)
                         Text(
                           'Type: ${task.taskType}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
