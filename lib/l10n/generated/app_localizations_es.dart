@@ -3300,6 +3300,16 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get weeklyDigestTitle => 'Resumen semanal';
+
+  @override
+  String get weeklyDigest => 'Resumen semanal';
+
+  @override
+  String get weeklyDigestDescription =>
+      'Un resumen semanal de tu tiempo de estudio, precisión, áreas por mejorar e insignias.';
+
+  @override
   String notificationTimeToReviewBody(int days, String topic) {
     return 'Han pasado $days días desde que practicó \"$topic\".';
   }
@@ -5319,6 +5329,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String mentorContextStreakAtRisk(int count) {
     return 'Tu racha de $count días está en riesgo — no has estudiado hoy. Una revisión rápida mantendrá la racha.';
+  }
+
+  @override
+  String mentorContextWellbeing(String fatigueLevel) {
+    return 'Bienestar autoinformado del estudiante: el nivel de fatiga es $fatigueLevel. Considere recomendar descanso y una carga de estudio más ligera.';
   }
 
   @override

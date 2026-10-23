@@ -48,13 +48,14 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       backupApiKey: fields[28] as String,
       backupBaseUrl: fields[29] as String,
       backupModel: fields[30] as String,
+      weeklyDigestEnabled: fields[31] as bool? ?? true,
     );
   }
 
   @override
   void write(BinaryWriter writer, SettingsBox obj) {
     writer
-      ..writeByte(31)
+      ..writeByte(32)
       ..writeByte(0)
       ..write(obj.apiKey)
       ..writeByte(1)
@@ -116,7 +117,9 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       ..writeByte(29)
       ..write(obj.backupBaseUrl)
       ..writeByte(30)
-      ..write(obj.backupModel);
+      ..write(obj.backupModel)
+      ..writeByte(31)
+      ..write(obj.weeklyDigestEnabled);
   }
 
   @override

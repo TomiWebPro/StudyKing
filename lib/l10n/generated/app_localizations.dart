@@ -5552,6 +5552,24 @@ abstract class AppLocalizations {
     int badgeCount,
   );
 
+  /// Title of the weekly accountability digest notification
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Digest'**
+  String get weeklyDigestTitle;
+
+  /// Settings toggle label for the weekly accountability digest
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly digest'**
+  String get weeklyDigest;
+
+  /// Settings toggle description for the weekly accountability digest
+  ///
+  /// In en, this message translates to:
+  /// **'A weekly summary of your study time, accuracy, weak areas, and badges.'**
+  String get weeklyDigestDescription;
+
   /// Body of revision reminder notification
   ///
   /// In en, this message translates to:
@@ -8668,6 +8686,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your {count}-day streak is at risk — you haven\'t studied today. A quick review will keep it alive.'**
   String mentorContextStreakAtRisk(int count);
+
+  /// Wellbeing status line in mentor context — student self-reported fatigue level
+  ///
+  /// In en, this message translates to:
+  /// **'Student self-reported wellbeing: fatigue level is {fatigueLevel}. Consider recommending rest and a lighter study load.'**
+  String mentorContextWellbeing(String fatigueLevel);
 
   /// Label for sessions today count in mentor context
   ///

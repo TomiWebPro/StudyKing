@@ -186,6 +186,7 @@ class SettingsRepository {
         overworkAlertsEnabled: box.get('overworkAlertsEnabled', defaultValue: true),
         planAdjustmentNotificationsEnabled:
             box.get('planAdjustmentNotificationsEnabled', defaultValue: true),
+        weeklyDigestEnabled: box.get('weeklyDigestEnabled', defaultValue: true),
         breakDurationSeconds: box.get('breakDurationSeconds', defaultValue: SettingsBox.defaultBreakDurationSeconds),
         dailyReminderHour: box.get('dailyReminderHour', defaultValue: SettingsBox.defaultDailyReminderHour),
         dailyReminderMinute: box.get('dailyReminderMinute', defaultValue: 0),
@@ -232,6 +233,7 @@ class SettingsRepository {
         lessonNotificationsEnabled: update.lessonNotificationsEnabled,
         overworkAlertsEnabled: update.overworkAlertsEnabled,
         planAdjustmentNotificationsEnabled: update.planAdjustmentNotificationsEnabled,
+        weeklyDigestEnabled: update.weeklyDigestEnabled,
         breakDurationSeconds: update.breakDurationSeconds,
         dailyReminderHour: update.dailyReminderHour,
         dailyReminderMinute: update.dailyReminderMinute,

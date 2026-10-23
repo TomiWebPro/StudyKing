@@ -82,6 +82,15 @@ class EngagementScheduler {
   final Set<String> _notifiedLessonKeys = {};
   ({bool enabled, int hour, int minute})? _lastAppliedDailyReminder;
 
+  /// Settings-box key holding the ISO timestamp of the last delivered weekly
+  /// digest. Persisting it (rather than keeping a process-local field) means a
+  /// restarted app does not re-send the same week's digest on every launch.
+  static const String _weeklyDigestLastSentKey = 'weekly_digest_last_sent';
+
+  /// In-memory mirror of [_weeklyDigestLastSentKey], also used as the baseline
+  /// when Hive is unavailable (e.g. unit tests without a settings box).
+  DateTime? _lastWeeklyDigestSentAt;
+
   EngagementScheduler({
     required StudyProgressTracker tracker,
     required MasteryGraphService masteryService,
@@ -189,6 +198,9 @@ class EngagementScheduler {
       await _adherenceRepository.init();
       await _backfillMissedChecks();
       await _autoFinalizeStaleSessions();
+      // Deliver a digest that came due while the app was closed as soon as the
+      // app starts, instead of waiting for the next daily check.
+      await _sendWeeklyDigestIfDue();
       _scheduleDailyCheck();
       _startLessonCheckTimer();
       return Result.success(null);
@@ -252,6 +264,7 @@ class EngagementScheduler {
     _scheduleDailyCheck();
     await _sendNudgeNotifications(_config.studentId);
     await _sendMentorNudges();
+    await _sendWeeklyDigestIfDue();
   }
 
   Future<void> _sendMentorNudges() async {
@@ -294,6 +307,7 @@ class EngagementScheduler {
       await _sendNudgeNotifications(_config.studentId);
       await _sendMentorNudges();
       await _checkUpcomingLessons();
+      await _sendWeeklyDigestIfDue();
       return Result.success(null);
     } catch (e) {
       _logger.w('runDailyChecksNow failed: $e');
@@ -310,6 +324,7 @@ class EngagementScheduler {
       'revision' => s.revisionRemindersEnabled,
       'planAdjustment' => s.planAdjustmentNotificationsEnabled,
       'lessonReminder' => s.lessonNotificationsEnabled,
+      'weeklyDigest' => s.weeklyDigestEnabled,
       _ => true,
     };
   }
@@ -662,6 +677,82 @@ class EngagementScheduler {
 
   Future<Result<List<EngagementNudgeModel>>> getNudgeHistory(String studentId) async {
     return _nudgeRepository.getByStudent(studentId);
+  }
+
+  /// Delivers the weekly accountability digest at most once per seven calendar
+  /// days (vision: "accountability messaging").
+  ///
+  /// The first run establishes a baseline instead of notifying: a brand-new
+  /// student should not receive a "weekly" digest on day one. Afterwards the
+  /// digest is composed from real progress data and posted through
+  /// [NotificationService.showWeeklyDigest]. Calendar-day arithmetic (rather
+  /// than elapsed 168h) keeps the weekly cadence stable across DST changes.
+  Future<void> _sendWeeklyDigestIfDue() async {
+    if (!_isNotificationEnabled('weeklyDigest')) {
+      _logger.d('Weekly digest disabled by user preferences');
+      return;
+    }
+    try {
+      final now = _clock.now();
+      final lastSent = await _readWeeklyDigestLastSent();
+      if (lastSent == null) {
+        await _persistWeeklyDigestLastSent(now);
+        return;
+      }
+      if (_calendarDayDiff(now, lastSent) < 7) return;
+
+      final digestResult = await getWeeklyDigest(_config.studentId);
+      if (digestResult.isFailure) {
+        _logger.w('Failed to compose weekly digest: ${digestResult.error}');
+        return;
+      }
+      final digest = digestResult.data ?? '';
+      if (digest.isEmpty) return;
+
+      final notifResult = await _notificationService.showWeeklyDigest(
+        id: NotificationIds.weeklyDigest,
+        body: digest,
+      );
+      if (notifResult.isFailure) {
+        // Leave the baseline untouched so the digest is retried on the next
+        // daily check instead of silently skipping the week.
+        _logger.w('Failed to show weekly digest notification: ${notifResult.error}');
+        return;
+      }
+      await _persistWeeklyDigestLastSent(now);
+    } catch (e) {
+      _logger.w('Failed to send weekly digest: $e');
+    }
+  }
+
+  Future<DateTime?> _readWeeklyDigestLastSent() async {
+    if (_lastWeeklyDigestSentAt != null) return _lastWeeklyDigestSentAt;
+    try {
+      final box = Hive.isBoxOpen(HiveBoxNames.settings)
+          ? Hive.box(HiveBoxNames.settings)
+          : await Hive.openBox(HiveBoxNames.settings);
+      final raw = box.get(_weeklyDigestLastSentKey) as String?;
+      final parsed = raw != null ? DateTime.tryParse(raw) : null;
+      _lastWeeklyDigestSentAt = parsed;
+      return parsed;
+    } catch (e) {
+      _logger.w('Failed to read weekly digest baseline: $e');
+      return null;
+    }
+  }
+
+  Future<void> _persistWeeklyDigestLastSent(DateTime at) async {
+    _lastWeeklyDigestSentAt = at;
+    try {
+      final box = Hive.isBoxOpen(HiveBoxNames.settings)
+          ? Hive.box(HiveBoxNames.settings)
+          : await Hive.openBox(HiveBoxNames.settings);
+      await box.put(_weeklyDigestLastSentKey, at.toIso8601String());
+    } catch (e) {
+      // Hive unavailable (unit tests / storage failure): the in-memory
+      // baseline still prevents duplicate digests for this app session.
+      _logger.w('Failed to persist weekly digest baseline: $e');
+    }
   }
 
   void dispose() {

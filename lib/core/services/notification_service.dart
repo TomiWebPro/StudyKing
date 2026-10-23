@@ -599,6 +599,31 @@ class NotificationService {
     }
   }
 
+  /// Posts the weekly accountability digest (week-in-review: activity,
+  /// accuracy, hours, weak areas, badges) as a single, replaceable
+  /// notification. The scheduler composes the localized body so the same
+  /// digest text is reused for the notification shade and any future UI.
+  Future<Result<void>> showWeeklyDigest({
+    required int id,
+    required String body,
+  }) async {
+    try {
+      final l10n = _l10n;
+      if (l10n == null) return Result.failure('l10n not initialized');
+      return await showNotification(
+        id: id,
+        title: l10n.weeklyDigestTitle,
+        body: body,
+        payload: 'open_mentor',
+        channelId: NotificationChannelIds.mentor,
+        channelName: l10n.notifChannelMentor,
+      );
+    } catch (e) {
+      _logger.w('Failed to show weekly digest $id', e);
+      return Result.failure(e.toString());
+    }
+  }
+
   Future<Result<void>> showMentorMessage({
     required int id,
     required String title,

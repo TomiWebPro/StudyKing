@@ -4342,6 +4342,18 @@
       }
     }
   },
+  "weeklyDigestTitle": "Resumen semanal",
+  "@weeklyDigestTitle": {
+    "description": "Title of the weekly accountability digest notification"
+  },
+  "weeklyDigest": "Resumen semanal",
+  "@weeklyDigest": {
+    "description": "Settings toggle label for the weekly accountability digest"
+  },
+  "weeklyDigestDescription": "Un resumen semanal de tu tiempo de estudio, precisión, áreas por mejorar e insignias.",
+  "@weeklyDigestDescription": {
+    "description": "Settings toggle description for the weekly accountability digest"
+  },
   "notificationTimeToReviewBody": "Han pasado {days} días desde que practicó \"{topic}\".",
   "@notificationTimeToReviewBody": {
     "description": "Body for the revision reminder notification",
@@ -6958,6 +6970,13 @@
     "description": "Warning for streak at risk in mentor context — student has a streak but hasn't studied today",
     "placeholders": {
       "count": { "type": "int" }
+    }
+  },
+  "mentorContextWellbeing": "Bienestar autoinformado del estudiante: el nivel de fatiga es {fatigueLevel}. Considere recomendar descanso y una carga de estudio más ligera.",
+  "@mentorContextWellbeing": {
+    "description": "Wellbeing status line in mentor context — student self-reported fatigue level",
+    "placeholders": {
+      "fatigueLevel": { "type": "String" }
     }
   },
   "mentorContextSessionsToday": "Sesiones hoy: {count}",

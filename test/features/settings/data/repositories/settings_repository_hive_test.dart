@@ -465,24 +465,28 @@ void main() {
           lessonNotificationsEnabled: false,
           overworkAlertsEnabled: false,
           planAdjustmentNotificationsEnabled: false,
+          weeklyDigestEnabled: false,
         ));
         final settings = (await repository.getSettings()).data!;
         expect(settings.revisionRemindersEnabled, isFalse);
         expect(settings.lessonNotificationsEnabled, isFalse);
         expect(settings.overworkAlertsEnabled, isFalse);
         expect(settings.planAdjustmentNotificationsEnabled, isFalse);
+        expect(settings.weeklyDigestEnabled, isFalse);
 
         await repository.updateSettings(SettingsUpdate(
           revisionRemindersEnabled: true,
           lessonNotificationsEnabled: true,
           overworkAlertsEnabled: true,
           planAdjustmentNotificationsEnabled: true,
+          weeklyDigestEnabled: true,
         ));
         final updated = (await repository.getSettings()).data!;
         expect(updated.revisionRemindersEnabled, isTrue);
         expect(updated.lessonNotificationsEnabled, isTrue);
         expect(updated.overworkAlertsEnabled, isTrue);
         expect(updated.planAdjustmentNotificationsEnabled, isTrue);
+        expect(updated.weeklyDigestEnabled, isTrue);
       });
 
       test('updates all backup provider fields', () async {

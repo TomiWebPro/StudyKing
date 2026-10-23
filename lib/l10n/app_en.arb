@@ -4342,6 +4342,18 @@
       }
     }
   },
+  "weeklyDigestTitle": "Weekly Digest",
+  "@weeklyDigestTitle": {
+    "description": "Title of the weekly accountability digest notification"
+  },
+  "weeklyDigest": "Weekly digest",
+  "@weeklyDigest": {
+    "description": "Settings toggle label for the weekly accountability digest"
+  },
+  "weeklyDigestDescription": "A weekly summary of your study time, accuracy, weak areas, and badges.",
+  "@weeklyDigestDescription": {
+    "description": "Settings toggle description for the weekly accountability digest"
+  },
   "notificationTimeToReviewBody": "It's been {days} days since you practiced \"{topic}\".",
   "@notificationTimeToReviewBody": {
     "description": "Body of revision reminder notification",
@@ -6991,6 +7003,13 @@
     "description": "Warning for streak at risk in mentor context — student has a streak but hasn't studied today",
     "placeholders": {
       "count": { "type": "int" }
+    }
+  },
+  "mentorContextWellbeing": "Student self-reported wellbeing: fatigue level is {fatigueLevel}. Consider recommending rest and a lighter study load.",
+  "@mentorContextWellbeing": {
+    "description": "Wellbeing status line in mentor context — student self-reported fatigue level",
+    "placeholders": {
+      "fatigueLevel": { "type": "String" }
     }
   },
   "mentorContextSessionsToday": "Sessions today: {count}",

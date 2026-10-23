@@ -105,6 +105,9 @@ class SettingsBox {
   @HiveField(30)
   late String backupModel;
 
+  @HiveField(31)
+  late bool weeklyDigestEnabled;
+
   SettingsBox({
     this.apiKey = '',
     this.apiBaseUrl = ApiConfig.openRouterBaseUrlString,
@@ -137,6 +140,7 @@ class SettingsBox {
     this.backupApiKey = '',
     this.backupBaseUrl = '',
     this.backupModel = '',
+    this.weeklyDigestEnabled = true,
   });
 
   ThemeMode get themeModeEnum => ThemeMode.values.firstWhere(
@@ -181,6 +185,7 @@ class SettingsBox {
       'backupApiKey': backupApiKey,
       'backupBaseUrl': backupBaseUrl,
       'backupModel': backupModel,
+      'weeklyDigestEnabled': weeklyDigestEnabled,
     };
   }
 
@@ -257,6 +262,9 @@ class SettingsBox {
       backupModel: json['backupModel'] is String
           ? json['backupModel'] as String
           : '',
+      weeklyDigestEnabled: json['weeklyDigestEnabled'] is bool
+          ? json['weeklyDigestEnabled'] as bool
+          : true,
     );
   }
 
@@ -292,6 +300,7 @@ class SettingsBox {
     String? backupApiKey,
     String? backupBaseUrl,
     String? backupModel,
+    bool? weeklyDigestEnabled,
   }) {
     return SettingsBox(
       apiKey: apiKey ?? this.apiKey,
@@ -325,6 +334,7 @@ class SettingsBox {
       backupApiKey: backupApiKey ?? this.backupApiKey,
       backupBaseUrl: backupBaseUrl ?? this.backupBaseUrl,
       backupModel: backupModel ?? this.backupModel,
+      weeklyDigestEnabled: weeklyDigestEnabled ?? this.weeklyDigestEnabled,
     );
   }
 

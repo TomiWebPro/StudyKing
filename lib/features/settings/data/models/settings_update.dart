@@ -17,6 +17,7 @@ class SettingsUpdate {
   final bool? lessonNotificationsEnabled;
   final bool? overworkAlertsEnabled;
   final bool? planAdjustmentNotificationsEnabled;
+  final bool? weeklyDigestEnabled;
   final int? breakDurationSeconds;
   final int? dailyReminderHour;
   final int? dailyReminderMinute;
@@ -47,6 +48,7 @@ class SettingsUpdate {
     this.lessonNotificationsEnabled,
     this.overworkAlertsEnabled,
     this.planAdjustmentNotificationsEnabled,
+    this.weeklyDigestEnabled,
     this.breakDurationSeconds,
     this.dailyReminderHour,
     this.dailyReminderMinute,
@@ -78,6 +80,7 @@ class SettingsUpdate {
     bool? lessonNotificationsEnabled,
     bool? overworkAlertsEnabled,
     bool? planAdjustmentNotificationsEnabled,
+    bool? weeklyDigestEnabled,
     int? breakDurationSeconds,
     int? dailyReminderHour,
     int? dailyReminderMinute,
@@ -108,6 +111,7 @@ class SettingsUpdate {
       lessonNotificationsEnabled: lessonNotificationsEnabled ?? this.lessonNotificationsEnabled,
       overworkAlertsEnabled: overworkAlertsEnabled ?? this.overworkAlertsEnabled,
       planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled ?? this.planAdjustmentNotificationsEnabled,
+      weeklyDigestEnabled: weeklyDigestEnabled ?? this.weeklyDigestEnabled,
       breakDurationSeconds: breakDurationSeconds ?? this.breakDurationSeconds,
       dailyReminderHour: dailyReminderHour ?? this.dailyReminderHour,
       dailyReminderMinute: dailyReminderMinute ?? this.dailyReminderMinute,
@@ -141,6 +145,7 @@ class SettingsUpdate {
     if (lessonNotificationsEnabled != null) map['lessonNotificationsEnabled'] = lessonNotificationsEnabled;
     if (overworkAlertsEnabled != null) map['overworkAlertsEnabled'] = overworkAlertsEnabled;
     if (planAdjustmentNotificationsEnabled != null) map['planAdjustmentNotificationsEnabled'] = planAdjustmentNotificationsEnabled;
+    if (weeklyDigestEnabled != null) map['weeklyDigestEnabled'] = weeklyDigestEnabled;
     if (breakDurationSeconds != null) map['breakDurationSeconds'] = breakDurationSeconds;
     if (dailyReminderHour != null) map['dailyReminderHour'] = dailyReminderHour;
     if (dailyReminderMinute != null) map['dailyReminderMinute'] = dailyReminderMinute;

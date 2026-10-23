@@ -10,6 +10,12 @@ class NotificationIds {
   /// ID of the recurring daily-study-reminder alarm.
   static const int dailyReminder = 9999;
 
+  /// ID of the weekly accountability digest notification. A fixed ID (rather
+  /// than the scheduler's rolling `_notificationIdCounter`) lets a later week's
+  /// digest replace the previous one instead of stacking stale copies in the
+  /// notification shade.
+  static const int weeklyDigest = 9998;
+
   /// Base id for upcoming-lesson one-shot alarms. Derived from the session id
   /// (see `NotificationService.lessonNotificationId`) so the same lesson alarm
   /// can be cancelled/rescheduled consistently. Kept well above the scheduler's

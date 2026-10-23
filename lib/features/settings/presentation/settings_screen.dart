@@ -308,6 +308,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                   onChanged: (value) =>
                       ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(planAdjustmentNotificationsEnabled: value)),
                 ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.insights),
+                  title: Text(l10n.weeklyDigest),
+                  subtitle: Text(l10n.weeklyDigestDescription),
+                  value: settings.weeklyDigestEnabled,
+                  onChanged: (value) =>
+                      ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(weeklyDigestEnabled: value)),
+                ),
               ],
               ListTile(
                 leading: const Icon(Icons.notifications),

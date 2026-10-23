@@ -217,6 +217,7 @@ class _FakeNotificationService extends NotificationService {
   final List<String> revisionTopicNames = [];
   final List<int> planAdjustmentLowDays = [];
   final List<({int id, String title, String body})> mentorMessages = [];
+  final List<({int id, String body})> weeklyDigests = [];
 
   @override
   Future<Result<void>> showOverworkWarning({
@@ -254,6 +255,30 @@ class _FakeNotificationService extends NotificationService {
   }) async {
     mentorMessages.add((id: id, title: title, body: body));
     return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> showWeeklyDigest({
+    required int id,
+    required String body,
+  }) async {
+    weeklyDigests.add((id: id, body: body));
+    return Result.success(null);
+  }
+}
+
+/// Notification service stub whose weekly digest always fails, used to verify
+/// the digest is retried instead of being silently skipped for a whole week.
+class _FailingWeeklyDigestNotificationService extends NotificationService {
+  int attempts = 0;
+
+  @override
+  Future<Result<void>> showWeeklyDigest({
+    required int id,
+    required String body,
+  }) async {
+    attempts++;
+    return Result.failure('simulated weekly digest failure');
   }
 }
 
@@ -483,6 +508,21 @@ class _FixedClock implements Clock {
 
   @override
   DateTime now() => fixed;
+}
+
+/// Clock stub the test can move forward, used to exercise the weekly digest's
+/// calendar-day cadence without waiting real time.
+class _MutableClock implements Clock {
+  DateTime current;
+
+  _MutableClock(this.current);
+
+  @override
+  DateTime now() => current;
+
+  void advance(Duration duration) {
+    current = current.add(duration);
+  }
 }
 
 void main() {
@@ -989,6 +1029,134 @@ void main() {
         expect(result.isSuccess, true);
         expect(result.data, contains('Weekly Digest'));
         expect(result.data, contains('questions answered'));
+      });
+    });
+
+    group('weekly digest delivery', () {
+      setUp(() async {
+        // The scheduler persists its cadence baseline in the settings box
+        // shared by the whole test process. Clear it so each test starts from
+        // a known "no digest sent yet" state instead of inheriting a baseline
+        // written by an earlier scheduler test using the real clock.
+        if (Hive.isBoxOpen(HiveBoxNames.settings)) {
+          await Hive.box(HiveBoxNames.settings)
+              .delete('weekly_digest_last_sent');
+        }
+      });
+
+      EngagementScheduler buildWeeklyScheduler({
+        required NotificationService notificationService,
+        required Clock clock,
+        SettingsBox? settingsBox,
+      }) {
+        return EngagementScheduler(
+          tracker: _FakeTracker(),
+          masteryService: _FakeMasteryForScheduler(),
+          notificationService: notificationService,
+          nudgeRepository: _FakeNudgeRepository(),
+          adherenceRepository: _FakeAdherenceRepo(),
+          planOrchestrator: _FakePlanAdherenceOrchestrator(
+            adherenceRepo: _FakeAdherenceRepo(),
+          ),
+          sessionRepository: _FakeSessionRepo(),
+          settingsBox: settingsBox,
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+          clock: clock,
+        );
+      }
+
+      test('a new student gets a baseline, not a day-one digest', () async {
+        final notif = _FakeNotificationService();
+        final clock = _MutableClock(DateTime(2026, 6, 1, 9));
+        final weeklyScheduler = buildWeeklyScheduler(
+          notificationService: notif,
+          clock: clock,
+        );
+
+        await weeklyScheduler.runDailyChecksNow();
+
+        expect(notif.weeklyDigests, isEmpty);
+      });
+
+      test('delivers exactly one digest after seven calendar days', () async {
+        final notif = _FakeNotificationService();
+        final clock = _MutableClock(DateTime(2026, 6, 1, 9));
+        final weeklyScheduler = buildWeeklyScheduler(
+          notificationService: notif,
+          clock: clock,
+        );
+
+        await weeklyScheduler.runDailyChecksNow();
+        clock.advance(const Duration(days: 7));
+        await weeklyScheduler.runDailyChecksNow();
+
+        expect(notif.weeklyDigests, hasLength(1));
+        expect(notif.weeklyDigests.single.id, NotificationIds.weeklyDigest);
+        expect(notif.weeklyDigests.single.body, contains('Weekly Digest'));
+        expect(notif.weeklyDigests.single.body, contains('questions answered'));
+      });
+
+      test('does not repeat the digest on later checks in the same week',
+          () async {
+        final notif = _FakeNotificationService();
+        final clock = _MutableClock(DateTime(2026, 6, 1, 9));
+        final weeklyScheduler = buildWeeklyScheduler(
+          notificationService: notif,
+          clock: clock,
+        );
+
+        await weeklyScheduler.runDailyChecksNow();
+        clock.advance(const Duration(days: 7));
+        await weeklyScheduler.runDailyChecksNow();
+        clock.advance(const Duration(days: 6));
+        await weeklyScheduler.runDailyChecksNow();
+
+        expect(notif.weeklyDigests, hasLength(1));
+
+        // The following day completes the next seven-day window.
+        clock.advance(const Duration(days: 1));
+        await weeklyScheduler.runDailyChecksNow();
+        expect(notif.weeklyDigests, hasLength(2));
+      });
+
+      test('suppresses the digest when the student turns it off', () async {
+        final notif = _FakeNotificationService();
+        final clock = _MutableClock(DateTime(2026, 6, 1, 9));
+        final weeklyScheduler = buildWeeklyScheduler(
+          notificationService: notif,
+          clock: clock,
+          settingsBox: SettingsBox(weeklyDigestEnabled: false),
+        );
+
+        await weeklyScheduler.runDailyChecksNow();
+        clock.advance(const Duration(days: 8));
+        await weeklyScheduler.runDailyChecksNow();
+
+        expect(notif.weeklyDigests, isEmpty);
+      });
+
+      test('retries a failed digest instead of skipping the week', () async {
+        final notif = _FailingWeeklyDigestNotificationService();
+        final clock = _MutableClock(DateTime(2026, 6, 1, 9));
+        final weeklyScheduler = buildWeeklyScheduler(
+          notificationService: notif,
+          clock: clock,
+        );
+
+        await weeklyScheduler.runDailyChecksNow();
+        clock.advance(const Duration(days: 7));
+        await weeklyScheduler.runDailyChecksNow();
+        expect(notif.attempts, 1);
+
+        // The baseline was not advanced on failure, so the next daily check
+        // tries again in the same week.
+        await weeklyScheduler.runDailyChecksNow();
+        expect(notif.attempts, 2);
       });
     });
 

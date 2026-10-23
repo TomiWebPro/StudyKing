@@ -65,6 +65,7 @@ class FakeSettingsRepository implements SettingsRepository {
       lessonNotificationsEnabled: update.lessonNotificationsEnabled ?? settings.lessonNotificationsEnabled,
       overworkAlertsEnabled: update.overworkAlertsEnabled ?? settings.overworkAlertsEnabled,
       planAdjustmentNotificationsEnabled: update.planAdjustmentNotificationsEnabled ?? settings.planAdjustmentNotificationsEnabled,
+      weeklyDigestEnabled: update.weeklyDigestEnabled ?? settings.weeklyDigestEnabled,
       breakDurationSeconds: update.breakDurationSeconds ?? settings.breakDurationSeconds,
       dailyReminderHour: update.dailyReminderHour ?? settings.dailyReminderHour,
       dailyReminderMinute: update.dailyReminderMinute ?? settings.dailyReminderMinute,
