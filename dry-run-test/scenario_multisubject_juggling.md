@@ -46,11 +46,10 @@ honors the explicit focus over implicit upcoming-lesson resolution (verified in
 |---|---|---|
 | Active syllabus identification (which subject the student means) | YES | `mentor_context_builder.dart:302-336` — `_buildSyllabusContext` resolves from upcoming lessons or single goal. `SwitchSyllabusFocusTool` sets an explicit focus that overrides implicit resolution (verified in unit test `switch_syllabus_focus_tool_test.dart:247-265`). |
 | Per-subject mastery (weak topics per subject) | YES | `get_weak_topics_tool.dart:9` — can be scoped by `subjectId`. `mastery_graph_service.dart` tracks per-topic mastery. |
-| Per-subject study time / streak | PARTIAL | `mentor_context_builder.dart:202-208` injects today's study time but not per-subject breakdown. `get_student_stats_tool.dart:9` surfaces aggregate stats. |
-| Daily study cap adherence per subject | NO | `adherence` is tracked at the plan level, not per-subject. No per-subject cap injection. |
+| Per-subject study time / streak | PASS | `mentor_context_builder.dart:346-377` — `_getTodayStudyMinutesBySubject()` feeds a sorted per-subject breakdown with cap-percentage annotations ("Physics: 45 min (50% of 90-min daily cap)"). Unit tests: `mentor_context_builder_test.dart:920-1003`. Integration test: `test/integration/per_subject_study_time_integration_test.dart`. |
+| Daily study cap adherence per subject | PASS | Each subject line includes cap percentage (`sharePct = mins/dailyCap * 100`). The total-time line above it also shows "cap exceeded" or "cap remaining" when the global cap is breached. `mentor_context_builder.dart:337-344, 351-377`. |
 
-**Gap:** No per-subject study time / daily cap context injected into mentor prompt.
-→ File `issues/open/scenario-multisubject-study-time-not-injected.md`
+**Gap (RESOLVED):** Per-subject study time with cap-percentage is now injected into the mentor prompt via `MentorContextBuilder._getTodayStudyMinutesBySubject()` (`mentor_context_builder.dart:351-377`). The agent can answer "How much time did I spend on each subject today?" and "Which subject consumed the most of my daily cap?". Issue `scenario-multisubject-study-time-not-injected.md` resolved.
 
 ## Comprehension rubric
 
@@ -72,9 +71,9 @@ Traced against code at:
 - Step 2: PASS — syllabus context resolves from upcoming lessons; ambiguity is surfaced.
 - Step 3: PARTIAL — `switch_syllabus_focus` tool now registered (focus can be set explicitly), but pacing per-subject may not be intuitive.
 - Step 4: PARTIAL — scheduling works but no subject-aware guidance in tool description.
-- Step 5: PARTIAL — dashboard aggregates; per-subject breakdown is limited.
+- Step 5: PASS — per-subject study time with cap-percentage IS injected into mentor prompt (`mentor_context_builder.dart:351-377`). Per-subject breakdown sorted descending by usage, with each line annotated as "X min (Y% of Z-min daily cap)". Unit tests cover breakdown, fallback, empty-case; integration test validates full flow.
 
 Tool audit: 6 of 6 needed tools exist; `switch_syllabus_focus` is FOUND (registered + traced).
 RESULT: all needed tools available (0 missing).
-Context audit: per-subject study time and daily cap not injected → open issue (`scenario-multisubject-study-time-not-injected.md`).
-**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `switch_syllabus_focus_tool.dart`, `llm_agent_providers.dart`).
+Context audit: per-subject study time AND cap adherence NOW injected → issue resolved (`scenario-multisubject-study-time-not-injected.md` CLOSED).
+**Last re-traced:** 2026-10-24 against merged changes for per-subject study time injection.

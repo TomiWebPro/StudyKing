@@ -24,6 +24,7 @@ import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/core/services/learning_method_analytics_service.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm_agent/agent_memory.dart';
 import 'package:studyking/features/mentor/services/syllabus_focus_service.dart';
 import 'package:studyking/features/practice/services/readiness_scorer.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -74,6 +75,14 @@ class MentorContextBuilder {
   /// is available (tests/fallback) so existing context is untouched.
   final LlmConfiguration? _llmConfig;
 
+  /// Per-student self-reported wellbeing facts (fatigue level, stress, etc.)
+  /// remembered by the agent during conversation. When present, a wellbeing
+  /// line is injected into the mentor context so the LLM can personalise its
+  /// response (Vision Next-Term §3.1 scenario audit:
+  /// scenario_overworked_student.md context audit). Null when no memory
+  /// store is wired — the prompt is left unchanged (existing behaviour).
+  final AgentMemoryStore? _agentMemoryStore;
+
   /// Human-readable summary of the student's active syllabi, so the mentor can
   /// understand which syllabus the student is referring to when they chat.
   String get currentSyllabusContext => _currentSyllabusContext;
@@ -92,6 +101,7 @@ class MentorContextBuilder {
     SyllabusFocusService? focusService,
     LlmConfiguration? llmConfig,
     ReadinessScorer? readinessScorer,
+    AgentMemoryStore? agentMemoryStore,
   })  : _progressTracker = progressTracker,
         _masteryService = masteryService,
         _plannerService = plannerService,
@@ -103,7 +113,8 @@ class MentorContextBuilder {
         _focusService = focusService,
         _llmConfig = llmConfig,
         _readinessScorer = readinessScorer,
-        _systemMonitor = systemMonitor;
+        _systemMonitor = systemMonitor,
+        _agentMemoryStore = agentMemoryStore;
 
   /// Upper bound on the number of per-topic readiness lines injected into the
   /// mentor context (keeps the prompt bounded).
@@ -177,6 +188,17 @@ class MentorContextBuilder {
         );
         _appendSourceExcerpts(buffer, sourceExcerpts, bullet);
       }
+    }
+
+    // Vision Next-Term §3.1 (scenario_new_user_learn_chemistry Step 5):
+    // When the student has uploaded materials but has not set up any subjects
+    // or syllabus goals, nudge the LLM to encourage subject/syllabus creation
+    // so the materials can be linked to a learning plan. Without this, the
+    // mentor sees the source inventory but has no explicit signal that the
+    // student is still in first-run setup. LLM-facing: invariant English per
+    // AGENTS.md i18n convention (prompt context lines).
+    if (syllabusGoals.isEmpty && sources != null && sources.isNotEmpty) {
+      buffer.writeln('$bullet The student has uploaded ${sources.length} study material(s) but has not set up any subjects or syllabi yet. Encourage them to create a subject so their materials can be linked to a plan, or guide them to upload a syllabus.');
     }
 
     if (plan != null) {
@@ -342,7 +364,15 @@ class MentorContextBuilder {
       for (final entry in sortedEntries) {
         final label = titleById[entry.key] ?? entry.key;
         final mins = entry.value ~/ msPerMinute;
-        buffer.writeln('  $bullet$label: ${formatDecimal(mins.toDouble(), _localeName, minFractionDigits: 0)} minutes');
+        // Cap adherence: show fraction of global daily cap when cap > 0
+        // (Vision Next-Term §3.1 scenario_multisubject_juggling).
+        // LLM-facing: invariant English — no locale formatting needed.
+        String capNote = '';
+        if (dailyCap > 0 && todayMinutes > 0) {
+          final sharePct = ((mins / dailyCap) * 100).round();
+          capNote = ' ($sharePct% of $dailyCap-min daily cap)';
+        }
+        buffer.writeln('  $bullet$label: ${formatDecimal(mins.toDouble(), _localeName, minFractionDigits: 0)} minutes$capNote');
       }
     }
 
@@ -374,6 +404,17 @@ class MentorContextBuilder {
       buffer.writeln('$bullet${l10n.mentorContextStreak(consecutiveDays)}');
     } else if (consecutiveDays >= 3) {
       buffer.writeln('$bullet${l10n.mentorContextStreakGood(consecutiveDays)}');
+    }
+
+    // Vision Next-Term §3.1 (scenario_overworked_student.md context audit):
+    // inject the student's self-reported wellbeing (fatigue level) so the LLM
+    // can personalise its response instead of giving generic encouragement.
+    // The fact is stored under 'wellbeing_fatigue_level' by the wellbeing
+    // input / nudge flow. Omitted when no memory store is wired or the fact
+    // is absent, so the prompt is never broken.
+    final wellbeingLine = _buildWellbeingLine(l10n);
+    if (wellbeingLine != null) {
+      buffer.writeln('$bullet$wellbeingLine');
     }
 
     final recentResult = await _sessionRepository.getByDate(DateTime.now());
@@ -663,6 +704,24 @@ class MentorContextBuilder {
       return 'LLM provider: $active. Backup: $backup configured.';
     }
     return 'LLM provider: $active. Backup: not configured.';
+  }
+
+  /// Builds a wellbeing-status line for the mentor context prompt by recalling
+  /// the student's self-reported fatigue level from [AgentMemoryStore]
+  /// (Vision Next-Term §3.1 / scenario_overworked_student.md context audit).
+  ///
+  /// Looks up the `wellbeing_fatigue_level` fact (stored as a string such as
+  /// "high", "medium", or "low"). Returns `null` when no memory store is wired
+  /// or the fact is absent/empty, so the caller leaves the prompt unchanged.
+  String? _buildWellbeingLine(AppLocalizations l10n) {
+    final store = _agentMemoryStore;
+    if (store == null) return null;
+    final fatigueLevel = store.recallFact(
+      _plannerService.studentId,
+      'wellbeing_fatigue_level',
+    );
+    if (fatigueLevel == null || fatigueLevel.isEmpty) return null;
+    return l10n.mentorContextWellbeing(fatigueLevel);
   }
 
   Future<Result<int>> _getConsecutiveStudyDays() async {

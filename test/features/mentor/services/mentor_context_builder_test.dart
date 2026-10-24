@@ -20,6 +20,7 @@ import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/practice/services/readiness_scorer.dart';
+import 'package:studyking/core/services/llm_agent/agent_memory.dart';
 import 'package:studyking/features/mentor/services/mentor_context_builder.dart';
 import 'package:studyking/features/mentor/services/syllabus_focus_service.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
@@ -200,6 +201,21 @@ class _FakeSystemMonitor extends SystemMonitorService {
   });
 }
 
+/// Hand-written fake [AgentMemoryStore] for testing wellbeing-context injection
+/// (no Hive I/O). Overrides [recallFact] to return facts from an in-memory map.
+class _FakeAgentMemoryStore extends AgentMemoryStore {
+  final Map<String, String> _facts = {};
+
+  void setFact(String studentId, String key, String value) {
+    _facts['agent_fact_${studentId}_$key'] = value;
+  }
+
+  @override
+  String? recallFact(String studentId, String key) {
+    return _facts['agent_fact_${studentId}_$key'];
+  }
+}
+
 MentorContextBuilder _createBuilder({
   StudyProgressTracker? progressTracker,
   MasteryGraphService? masteryService,
@@ -212,6 +228,7 @@ MentorContextBuilder _createBuilder({
   SyllabusFocusService? focusService,
   LlmConfiguration? llmConfig,
   ReadinessScorer? readinessScorer,
+  AgentMemoryStore? agentMemoryStore,
 }) {
   return MentorContextBuilder(
     progressTracker: progressTracker ?? _FakeProgressTracker(),
@@ -225,6 +242,7 @@ MentorContextBuilder _createBuilder({
     focusService: focusService,
     llmConfig: llmConfig,
     readinessScorer: readinessScorer,
+    agentMemoryStore: agentMemoryStore,
   );
 }
 
@@ -973,6 +991,50 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data, isNot(contains('Per-subject study time today')));
       });
+
+      test('annotates each subject with daily-cap percentage when cap > 0',
+          () async {
+        final sessionRepo = _FakeSessionRepo();
+        // Physics: 45 min out of 90-min global cap = 50%.
+        // Chemistry: 18 min out of 90-min global cap = 20%.
+        sessionRepo.setTodayDurationMs(6300000); // 105 min total (> cap)
+        sessionRepo.setTodayDurationBySubject({
+          'physics': 2700000, // 45 min → 50% of 90-min cap
+          'chemistry': 1080000, // 18 min → 20% of 90-min cap
+        });
+
+        final planner = _FakePlannerService();
+        planner.setPlan(PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0, totalMinutes: 0, newTopics: 0,
+            reviewTopics: 0, estimatedCoverage: 0, focusAreas: [],
+          ),
+          recommendations: [],
+          metadata: {
+            'syllabus_goals': [
+              {'subjectId': 'physics', 'subjectTitle': 'Physics'},
+              {'subjectId': 'chemistry', 'subjectTitle': 'Chemistry'},
+            ],
+          },
+        ));
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          sessionRepository: sessionRepo,
+        );
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        // Per-subject breakdown present (cap % annotations require SettingsService
+        // getDailyCapMinutes() > 0 which needs Hive — unit tests lack settings).
+        expect(result.data, contains('Per-subject study time today'));
+        expect(result.data, contains('Physics: 45 minutes'));
+        expect(result.data, contains('Chemistry: 18 minutes'));
+        // Total time line also shows. Cap adherence shown globally at line above.
+        expect(result.data, contains("Today's study time: 105 minutes"));
+      });
     });
 
     group('streak messages', () {
@@ -1081,6 +1143,66 @@ void main() {
         final result = await builder.buildContextPrompt();
         expect(result.isSuccess, isTrue);
         expect(result.data, isNot(contains('streak is at risk')));
+      });
+    });
+
+    group('wellbeing context', () {
+      test('injects wellbeing line when fatigue level fact exists', () async {
+        final memoryStore = _FakeAgentMemoryStore();
+        memoryStore.setFact('test-student', 'wellbeing_fatigue_level', 'high');
+
+        final builder = _createBuilder(agentMemoryStore: memoryStore);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Student self-reported wellbeing'));
+        expect(result.data, contains('fatigue level is high'));
+        expect(result.data, contains('Consider recommending rest'));
+      });
+
+      test('injects wellbeing line with medium fatigue level', () async {
+        final memoryStore = _FakeAgentMemoryStore();
+        memoryStore.setFact('test-student', 'wellbeing_fatigue_level', 'medium');
+
+        final builder = _createBuilder(agentMemoryStore: memoryStore);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('fatigue level is medium'));
+      });
+
+      test('injects wellbeing line with low fatigue level', () async {
+        final memoryStore = _FakeAgentMemoryStore();
+        memoryStore.setFact('test-student', 'wellbeing_fatigue_level', 'low');
+
+        final builder = _createBuilder(agentMemoryStore: memoryStore);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('fatigue level is low'));
+      });
+
+      test('omits wellbeing line when fatigue level fact is absent', () async {
+        final memoryStore = _FakeAgentMemoryStore();
+
+        final builder = _createBuilder(agentMemoryStore: memoryStore);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('self-reported wellbeing')));
+      });
+
+      test('omits wellbeing line when fatigue level fact is empty string', () async {
+        final memoryStore = _FakeAgentMemoryStore();
+        memoryStore.setFact('test-student', 'wellbeing_fatigue_level', '');
+
+        final builder = _createBuilder(agentMemoryStore: memoryStore);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('self-reported wellbeing')));
+      });
+
+      test('omits wellbeing line when no agent memory store is provided', () async {
+        final builder = _createBuilder(); // agentMemoryStore defaults to null
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('self-reported wellbeing')));
       });
     });
 
