@@ -309,6 +309,52 @@ every screen golden test currently hand-rolls (see
 `test/features/mentor/presentation/mentor_screen_golden_test.dart:157` and
 `test/features/planner/presentation/planner_screen_golden_test.dart:187`).
 
+### `saveGoldenPathBytes`
+
+After any matrix helper returns `Map<String, Uint8List>` (path → PNG bytes),
+call this function once to persist every entry to disk — no manual loop needed:
+
+```dart
+Map<String, String> saveGoldenPathBytes(
+  Map<String, Uint8List> pathToPngs, {
+  required String outputDir,
+})
+```
+
+- Creates parent directories recursively (delegates to [`savePng`](#savepng--imagecomparisonresultsavediff)).
+- On error for one entry, logs a message via `print` and **continues** with the
+  rest — one bad cell does not abort the entire matrix.
+- Returns `Map<String, String>` mapping original paths to saved file paths.
+- Empty input returns an empty map immediately.
+
+Example usage after a matrix render:
+
+```dart
+final goldens = await renderScreenGoldenMatrixFull(
+  (locale, theme) => ProviderScope(
+    overrides: [/* fakes */],
+    child: const MyScreen(),
+  ),
+  locales: [const Locale('en'), const Locale('es')],
+  sizes: [const Size(375, 800), const Size(1200, 800)],
+  themeModes: [ThemeMode.light, ThemeMode.dark],
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  pathBuilder: (locale, size, theme) =>
+      buildGoldenPath('dashboard', locale, size, theme),
+);
+// Persist all N files in one call.
+final saved = saveGoldenPathBytes(goldens, outputDir: 'test/goldens');
+print('Wrote ${saved.length} golden files.');
+```
+
+Safe to call from inside or outside `runAsync` — the underlying writes are
+synchronous `dart:io`, unaffected by the `flutter_test` `FakeAsync` clock.
+The package's own tests (`packages/flutter_to_image/test/save_golden_path_bytes_test.dart`)
+verify: empty input → empty output; non-empty input writes every entry byte-exact;
+one failing entry does not abort others; returned paths start with `outputDir`;
+and integration through both `renderGoldenMatrix` and `renderScreenGoldenMatrixFull`.
+
 ---
 
 ## Image diff helper

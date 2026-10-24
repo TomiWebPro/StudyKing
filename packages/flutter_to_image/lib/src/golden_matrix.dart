@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import 'file_io.dart';
 import 'renderer.dart';
 
 /// Builds a golden file path from locale, size, and theme.
@@ -409,4 +410,73 @@ Future<Map<String, Uint8List>> renderScreenGoldenTextScaleSweep(
     results[path] = png;
   }
   return results;
+}
+
+/// Persists every entry in [pathToPngs] to disk under [outputDir].
+///
+/// This is the convenience helper that completes the golden-matrix workflow
+/// described in `docs/vision_next_term.md` §1.1: after a matrix renders all
+/// locale/size/theme cells into a `Map<String, Uint8List>` (path → PNG bytes),
+/// call this function once to write them all to disk — no manual loop required.
+///
+/// **Signature:** `saveGoldenPathBytes(map, outputDir: 'test/goldens')`
+///
+/// - Each path's parent directory relative to [outputDir] is created recursively.
+///   For example, with `outputDir: 'test/goldens'` and an entry
+///   `'test/goldens/dashboard_en_375_light.png'`, the caller passes the full
+///   path as-is (the original key) and the saved path becomes identical.
+///   When paths contain sub-paths like `'goldens/foo/bar.png'` with
+///   `outputDir: '.'`, they are written as `'./goldens/foo/bar.png'`.
+/// - On error for a single entry (e.g. permission denied), the error is logged
+///   via `print` and that entry is silently omitted — other entries continue
+///   to be written. The return map contains only successfully-written entries.
+/// - Returns a new `Map<String, String>` where keys are the original golden
+///   paths and values are the actual disk paths returned by [savePng].
+/// - Empty input returns an empty map immediately.
+///
+/// Example usage:
+/// ```dart
+/// final goldens = await renderScreenGoldenMatrixFull(
+///   screenBuilder,
+///   locales: [const Locale('en'), const Locale('es')],
+///   sizes: [const Size(375, 800), const Size(1200, 800)],
+///   themeModes: [ThemeMode.light, ThemeMode.dark],
+///   localizationsDelegates: AppLocalizations.localizationsDelegates,
+///   supportedLocales: AppLocalizations.supportedLocales,
+///   pathBuilder: (locale, size, theme) =>
+///       buildGoldenPath('dashboard', locale, size, theme),
+/// );
+/// // One-liner: persist all 8 files.
+/// final saved = saveGoldenPathBytes(goldens, outputDir: 'test/goldens');
+/// print('Wrote ${saved.length} golden files.');
+/// // → "Wrote 8 golden files."
+/// ```
+///
+/// Safe to call from within a `testWidgets` callback or from dev-tooling code.
+/// Underlying writes use synchronous `dart:io` APIs, so they are unaffected
+/// by the `flutter_test` `FakeAsync` clock.
+Map<String, String> saveGoldenPathBytes(
+  Map<String, Uint8List> pathToPngs, {
+  required String outputDir,
+}) {
+  final saved = <String, String>{};
+  if (pathToPngs.isEmpty) {
+    return saved;
+  }
+
+  for (final entry in pathToPngs.entries) {
+    try {
+      final outputPath = '$outputDir/${entry.key}';
+      savePng(entry.value, outputPath);
+      saved[entry.key] = outputPath;
+    } catch (e) {
+      // Log but do not abort — one bad cell should not prevent the rest
+      // of the matrix from being persisted.
+      // ignore: avoid_print
+      print('[flutter_to_image] failed to save golden path '
+          '${entry.key}: $e');
+    }
+  }
+
+  return saved;
 }

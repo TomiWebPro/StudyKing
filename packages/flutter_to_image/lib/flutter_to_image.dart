@@ -5,7 +5,8 @@
 /// [renderScreenToImageResult], [ImageResult], and the golden-matrix
 /// helpers [renderGoldenMatrix], [renderGoldenMatrixFull],
 /// [renderGoldenTextScaleSweep], [renderScreenGoldenMatrix],
-/// [renderScreenGoldenMatrixFull], and [renderScreenGoldenTextScaleSweep].
+/// [renderScreenGoldenMatrixFull], [renderScreenGoldenTextScaleSweep],
+/// and [saveGoldenPathBytes] for persisting matrix results to disk.
 ///
 /// Also exports the visual-diff API: [compareImages], [ImageComparisonResult],
 /// and the disk-persistence helper [savePng] for attaching "expected vs actual
