@@ -1724,6 +1724,369 @@ void main() {
       await executor.persistenceComplete;
     });
   });
+
+  group('IdleExecutor deferred-task visibility (portal bridge)', () {
+    // Vision Next-Term §4.2: a prep job a gate defers must be visible to the
+    // student as a queued task WITH a reason, and the portal's cancel /
+    // try-now actions must act on the queue (deferred work has no LlmTask yet).
+    // This is the inverse of the old "deferred means invisible" behaviour.
+
+    test('records quiet-hours reason on the waiting task', () async {
+      final executor = IdleExecutor(shouldDeferForQuietHours: (_) => true);
+
+      await executor.enqueue('nightly pdf parse', () async {});
+
+      expect(executor.queuedTasks, hasLength(1));
+      expect(executor.queuedTasks.single.description, 'nightly pdf parse');
+      expect(
+        executor.queuedTasks.single.deferredReason,
+        PrepDeferralReason.quietHours,
+        reason: 'the portal must be able to say WHY prep is waiting',
+      );
+
+      executor.dispose();
+    });
+
+    test('records system-load reason for a heavy task under pressure', () async {
+      final monitor = MutableFakeSystemMonitorService(
+        canRunHeavyPrepNowValue: false,
+      );
+      final executor = IdleExecutor(systemMonitor: monitor);
+
+      await executor.enqueue('heavy embeddings', () async {}, requiresHeavy: true);
+
+      expect(
+        executor.queuedTasks.single.deferredReason,
+        PrepDeferralReason.systemLoad,
+      );
+
+      executor.dispose();
+    });
+
+    test('records subject-disabled reason when the student paused a syllabus',
+        () async {
+      final executor = IdleExecutor(isPrepEnabledForSubject: (_) => false);
+
+      await executor.enqueuePrepTool(
+        'prep chemistry lesson',
+        () async => {'success': true},
+        requiresHeavy: false,
+        feature: 'lesson_prep',
+        taskType: 'lesson_prep',
+        subjectId: 'chemistry',
+      );
+
+      expect(
+        executor.queuedTasks.single.deferredReason,
+        PrepDeferralReason.subjectDisabled,
+      );
+
+      executor.dispose();
+    });
+
+    test('records budget reason and does not spam listeners on repeated polls',
+        () async {
+      final budget = MutableFakePrepBudgetService(
+        canSpendValue: false,
+        remainingForValue: 0,
+        meter: LlmUsageMeter(),
+      );
+      final executor = IdleExecutor(prepBudgetService: budget);
+      var notifications = 0;
+      executor.addListener(() => notifications++);
+
+      await executor.enqueuePrepTool(
+        'pdf ingestion over cap',
+        () async => {'success': true},
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        estimatedInputTokens: 8000,
+        estimatedOutputTokens: 2000,
+      );
+
+      expect(
+        executor.queuedTasks.single.deferredReason,
+        PrepDeferralReason.budgetExhausted,
+      );
+      final notificationsAfterEnqueue = notifications;
+      expect(notificationsAfterEnqueue, greaterThanOrEqualTo(1),
+          reason: 'the portal must learn about the deferral');
+
+      // A later poll with the same exhausted budget must not re-notify.
+      await executor.processNext();
+      expect(notifications, notificationsAfterEnqueue,
+          reason: 'an unchanged deferral reason must not re-render the portal');
+
+      executor.dispose();
+    });
+
+    test('try-now runs the deferred task once the gate clears and drops the reason',
+        () async {
+      var quietHours = true;
+      var ran = false;
+      final executor = IdleExecutor(
+        shouldDeferForQuietHours: (_) => quietHours,
+      );
+
+      await executor.enqueue('pre-generate lesson', () async {
+        ran = true;
+      });
+      expect(
+        executor.queuedTasks.single.deferredReason,
+        PrepDeferralReason.quietHours,
+      );
+
+      quietHours = false;
+      await executor.retryDeferredNow();
+
+      expect(ran, isTrue, reason: 'try-now must resume the deferred prep job');
+      expect(executor.queuedTasks, isEmpty);
+      expect(executor.queue.single.isCompleted, isTrue);
+      expect(executor.queue.single.deferredReason, isNull,
+          reason: 'a started task must not keep advertising a pause reason');
+
+      executor.dispose();
+    });
+
+    test('cancelQueuedTask removes deferred work and rejects unknown ids',
+        () async {
+      var ran = false;
+      final executor = IdleExecutor(shouldDeferForQuietHours: (_) => true);
+
+      await executor.enqueue('cancel me', () async {
+        ran = true;
+      });
+      final id = executor.queuedTasks.single.id;
+
+      expect(executor.cancelQueuedTask('missing-task'), isFalse);
+      expect(executor.cancelQueuedTask(id), isTrue);
+      expect(executor.queuedTasks, isEmpty);
+      expect(ran, isFalse, reason: 'cancelled prep must never spend tokens');
+
+      executor.dispose();
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // Vision Next-Term §4.4 acceptance criterion 3: queued tasks visible
+  // through IdleExecutor under EACH deferral gate, and transitioning
+  // queued → running → done after recovery.
+  // ------------------------------------------------------------------
+  group('IdleExecutor deferred visibility transitions (Vision §4.4 criterion 3)', () {
+    test('quiet hours deferral shows reason and transitions on recovery', () async {
+      final executor = IdleExecutor(shouldDeferForQuietHours: (_) => true);
+      final manager = LlmTaskManager();
+      final executor2 = IdleExecutor(
+        shouldDeferForQuietHours: (_) => false,
+        llmTaskManager: manager,
+      );
+
+      var taskRan = false;
+      await executor.enqueue('prep task', () async {
+        taskRan = true;
+      });
+
+      expect(taskRan, isFalse);
+      expect(executor.queue.length, 1);
+      expect(executor.queue.first.deferredReason, PrepDeferralReason.quietHours);
+      expect(executor.queue.first.isRunning, isFalse);
+      expect(executor.queue.first.isCompleted, isFalse);
+
+      await executor2.enqueue('prep task recovered', () async {
+        taskRan = true;
+      });
+      expect(taskRan, isTrue);
+      expect(executor2.queue.first.isCompleted, isTrue);
+      expect(executor2.queue.first.deferredReason, isNull);
+
+      executor.dispose();
+      executor2.dispose();
+    });
+
+    test('CPU/battery pressure deferral shows reason and transitions on recovery',
+        () async {
+      final monitor = MutableFakeSystemMonitorService(
+        canRunHeavyPrepNowValue: false,
+      );
+      final executor = IdleExecutor(systemMonitor: monitor);
+
+      await executor.enqueuePrepTool(
+        'heavy embedding prep',
+        () async => {'success': true},
+        requiresHeavy: true,
+        feature: 'embeddings',
+        taskType: 'embeddings',
+      );
+
+      // Under CPU pressure → deferred with systemLoad reason.
+      expect(executor.queue.first.isCompleted, isFalse);
+      expect(executor.queue.first.isRunning, isFalse);
+      expect(executor.queue.first.deferredReason, PrepDeferralReason.systemLoad);
+
+      // System recovers → task runs.
+      monitor.canRunHeavyPrepNowValue = true;
+      await executor.processNext();
+
+      // Transitioned: deferred → running → done.
+      expect(executor.queue.first.isCompleted, isTrue);
+      expect(executor.queue.first.isRunning, isFalse);
+      expect(executor.queue.first.deferredReason, isNull);
+
+      executor.dispose();
+    });
+
+    test('subject disabled deferral shows reason and transitions when re-enabled',
+        () async {
+      bool isEnabled(String id) => id != 'chemistry';
+      final executor = IdleExecutor(
+        isPrepEnabledForSubject: isEnabled,
+      );
+
+      var toolRan = false;
+      await executor.enqueuePrepTool(
+        'prep chemistry',
+        () async {
+          toolRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'lesson_prep',
+        taskType: 'lesson_prep',
+        subjectId: 'chemistry',
+      );
+
+      expect(toolRan, isFalse);
+      expect(executor.queue.first.deferredReason, PrepDeferralReason.subjectDisabled);
+
+      final executor2 = IdleExecutor(
+        isPrepEnabledForSubject: (_) => true,
+      );
+      await executor2.enqueuePrepTool(
+        'prep chemistry recovered',
+        () async {
+          toolRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'lesson_prep',
+        taskType: 'lesson_prep',
+        subjectId: 'chemistry',
+      );
+
+      expect(toolRan, isTrue);
+      expect(executor2.queue.last.isCompleted, isTrue);
+
+      executor.dispose();
+      executor2.dispose();
+    });
+
+    test('budget exhaustion deferral shows reason and transitions when budget recovers',
+        () async {
+      final meter = LlmUsageMeter();
+      meter.recordUsage(
+        id: 'exhausted',
+        feature: 'prep',
+        modelId: 'gpt-4',
+        inputTokens: 10000,
+        outputTokens: 0,
+        taskType: 'pdf_ingestion',
+      );
+      final budget = MutableFakePrepBudgetService(meter: meter, canSpendValue: false);
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(
+        llmTaskManager: manager,
+        prepBudgetService: budget,
+      );
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'pdf ingestion over budget',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        estimatedInputTokens: 8000,
+        estimatedOutputTokens: 2000,
+      );
+
+      expect(taskRan, isFalse);
+      expect(executor.queue.first.deferredReason, PrepDeferralReason.budgetExhausted);
+      expect(manager.tasks, isEmpty);
+
+      budget.canSpendValue = true;
+      await executor.processNext();
+
+      expect(taskRan, isTrue);
+      expect(executor.queue.first.isCompleted, isTrue);
+      expect(executor.queue.first.deferredReason, isNull);
+      expect(manager.tasks.any((t) => t.status == LlmTaskStatus.done), isTrue);
+
+      executor.dispose();
+    });
+
+    test('only one deferred reason per task — quiet-hours takes priority over CPU',
+        () async {
+      final monitor = MutableFakeSystemMonitorService(canRunHeavyPrepNowValue: false);
+      final executor = IdleExecutor(
+        shouldDeferForQuietHours: (_) => true,
+        systemMonitor: monitor,
+      );
+
+      var taskRan = false;
+      await executor.enqueue('multi-gate test task', () async {
+        taskRan = true;
+      }, requiresHeavy: true);
+
+      expect(taskRan, isFalse);
+      expect(executor.queue.first.deferredReason, PrepDeferralReason.quietHours);
+      expect(executor.queue.first.deferredReason, isNot(PrepDeferralReason.systemLoad));
+
+      executor.dispose();
+    });
+
+    test('non-heavy task is never deferred by system-load gate', () async {
+      final monitor = MutableFakeSystemMonitorService(canRunHeavyPrepNowValue: false);
+      final executor = IdleExecutor(systemMonitor: monitor);
+
+      var taskRan = false;
+      await executor.enqueue('light maintenance', () async {
+        taskRan = true;
+      });
+
+      expect(taskRan, isTrue);
+      expect(executor.queue.first.isCompleted, isTrue);
+      expect(executor.queue.first.deferredReason, isNull);
+
+      executor.dispose();
+    });
+
+    test('queued task list is ordered by createdAt (oldest first)', () async {
+      final executor = IdleExecutor(shouldDeferForQuietHours: (_) => true);
+
+      await executor.enqueue('first task', () async {});
+      await executor.enqueue('second task', () async {});
+      await executor.enqueue('third task', () async {});
+
+      // Only the FIRST enqueued task reaches _tryExecuteNext per poll cycle
+      // (gates mark exactly one task as deferred and return). So only the
+      // head of the queue carries a deferredReason; others are still waiting.
+      final queued = executor.queuedTasks;
+      expect(queued.length, 3, reason: 'all three tasks remain in the queue');
+      expect(queued[0].createdAt.compareTo(queued[1].createdAt), lessThanOrEqualTo(0));
+      expect(queued[1].createdAt.compareTo(queued[2].createdAt), lessThanOrEqualTo(0));
+      expect(queued[0].deferredReason, PrepDeferralReason.quietHours,
+          reason: 'the head task was picked up by _tryExecuteNext');
+      // Later tasks have not yet been polled — they will be deferred on the next timer tick.
+      expect(queued[1].deferredReason, isNull);
+      expect(queued[2].deferredReason, isNull);
+
+      executor.dispose();
+    });
+  });
 }
 
 /// Hand-written, mutable fake [SystemMonitorService] for deterministic testing
@@ -1769,7 +2132,7 @@ class MutableFakeSystemMonitorService extends SystemMonitorService {
   @override
   String? get networkType => networkTypeValue;
 }
-
+/// Hand-written, mutable fake [PrepBudgetService] for deterministic testing
 /// Hand-written, mutable fake [PrepBudgetService] for deterministic testing
 /// of the IdleExecutor's prep-budget gate (idle_executor.dart prep-budget gate
 /// block). Allows toggling `canSpend` and `remainingFor` at runtime so a
