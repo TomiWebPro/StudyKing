@@ -613,18 +613,29 @@ void main() {
       // Context the LLM needs vs. what is now injected:
       // - Streak count (consecutive days): YES (injected for milestones AND at-risk)
       // - Streak-at-risk status (no study session today): YES (now injected)
-      // - Self-reported wellbeing (fatigue level): NO (still missing)
+      // - Self-reported wellbeing (fatigue level): YES (now injected via AgentMemoryStore 'wellbeing_fatigue_level' fact)
       final l10n = lookupAppLocalizations(const Locale('en'));
       final streakAtRiskMsg = l10n.mentorContextStreakAtRisk(5);
       expect(streakAtRiskMsg, isNotEmpty,
           reason: 'mentorContextStreakAtRisk L10n method must exist and produce output');
+      // Wellbeing context is now injected from AgentMemoryStore 'wellbeing_fatigue_level'
+      // fact (MentorContextBuilder._buildWellbeingLine).
+      final wellbeingMsg = l10n.mentorContextWellbeing('high');
+      expect(wellbeingMsg, isNotEmpty,
+          reason: 'mentorContextWellbeing L10n method must exist and produce output');
+      expect(wellbeingMsg, contains('fatigue level is high'),
+          reason: 'wellbeing line must include the self-reported fatigue level');
+      expect(wellbeingMsg, contains('Consider recommending rest'),
+          reason: 'wellbeing line must advise rest and lighter study load');
     });
 
-    test('Verdict trace: overworked-student scenario produces PARTIAL trace', () {
+    test('Verdict trace: overworked-student scenario produces PASS trace', () {
       // Produces the human-readable trace that maps to
       // dry-run-test/scenario_overworked_student.md Validation Results.
-      // Step 2 was PARTIAL (no streak-preservation nudge) — now addressed
-      // by streak-risk context injection, so it becomes PASS.
+      // Step 2 was PARTIAL (no streak-preservation nudge) — addressed by
+      // streak-risk context injection, so it becomes PASS.
+      // Step 3 was PARTIAL (no wellbeing context) — addressed by
+      // AgentMemoryStore wellbeing-injection, so it becomes PASS.
       final trace = <String>[];
       var partialCount = 0;
 
@@ -633,8 +644,10 @@ void main() {
       // Step 2: was PARTIAL, now PASS (streak-risk now injected)
       trace.add('Step 2: PASS — streak-at-risk context now injected into mentor prompt');
 
-      trace.add('Step 3: PARTIAL — mentor can respond but no wellbeing-specific branching');
-      partialCount++;
+      // Step 3: was PARTIAL, now PASS (wellbeing fatigue level now injected
+      // from AgentMemoryStore 'wellbeing_fatigue_level' fact via
+      // MentorContextBuilder._buildWellbeingLine)
+      trace.add('Step 3: PASS — self-reported wellbeing (fatigue level) now injected into mentor prompt via AgentMemoryStore');
 
       trace.add('Step 4: PASS — schedule_rest_day + wellbeing_adjust_schedule tools registered and traced through AgentLoop with real implementations');
       trace.add('Step 5: PASS — SystemMonitorService implemented, heavy prep defers under load');
@@ -651,11 +664,12 @@ void main() {
       // ignore: avoid_print
       print('=== End trace ===');
 
-      // Step 3 remains PARTIAL — the gap is not fully closed, but the
-      // streak-risk context injection (Step 2) is now fixed.
-      expect(partialCount, greaterThan(0),
-          reason: 'Step 3 is PARTIAL — wellbeing-specific branching in mentor '
-              'chat is still missing. See dry-run-test/scenario_overworked_student.md');
+      // All steps now PASS — wellbeing context injection (Step 3) is now
+      // implemented via AgentMemoryStore, closing the last gap.
+      expect(partialCount, equals(0),
+          reason: 'Overworked-student scenario — all steps PASS: wellbeing '
+              '(fatigue level) is now injected from AgentMemoryStore into '
+              'the mentor context prompt. See dry-run-test/scenario_overworked_student.md');
     });
   });
 

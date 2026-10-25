@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/core/providers/idle_executor_providers.dart'
+    show idleExecutorProvider;
 import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/providers/prep_budget_providers.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -76,6 +78,7 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
   final usageMeter = ref.watch(llmUsageMeterProvider);
   final budgetService = ref.watch(prepBudgetServiceProvider);
   final systemMonitor = ref.watch(systemMonitorServiceProvider);
+  final notificationService = ref.watch(notificationServiceProvider);
   final questionVariantService = ref.watch(questionVariantServiceProvider);
   final focusService = ref.watch(syllabusFocusServiceProvider);
   final mistakeReviewService = ref.watch(mistakeReviewServiceProvider);
@@ -284,6 +287,7 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
       taskManager: taskManager,
       usageMeter: usageMeter,
       budgetService: budgetService,
+      notificationService: notificationService,
     ),
     RefreshMasteryTool(
       masteryService: masteryService,
@@ -337,15 +341,22 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
   final taskManager = ref.watch(llmTaskManagerProvider);
   final usageMeter = ref.watch(llmUsageMeterProvider);
   
-  // Vision §4.2: quiet-hours + per-subject opt-in — the IdleExecutor must defer
-  // off-period prep tasks when (a) the student has configured a quiet window
-  // (e.g. 22:00–08:00) or (b) a syllabus has been paused via the per-subject
-  // prep toggle. Both predicates are derived from the persisted [PrepBudget]
-  // so the executor stays free of a direct budget-model dependency at the
-  // service layer (mirrors the existing quiet-hours injection pattern).
+  // Vision §4.2: quiet-hours + per-subject opt-in — the shared off-period
+  // prep queue (idleExecutorProvider) defers prep tasks when (a) the student
+  // has configured a quiet window (e.g. 22:00–08:00) or (b) a syllabus has
+  // been paused via the per-subject prep toggle. Both predicates are derived
+  // from the persisted [PrepBudget] so the executor stays free of a direct
+  // budget-model dependency at the service layer (mirrors the existing
+  // quiet-hours injection pattern).
   // The PrepBudgetService is also injected so the IdleExecutor can consult
   // canSpend() before creating the parent LlmTask (Vision Next-Term §4.2/§4.4),
   // deferring over-budget prep instead of starting it and failing at the tool level.
+  //
+  // Vision Next-Term §4.2: the queue is SHARED with bulk ingestion and with
+  // the task-manager portal, so prep the mentor defers through AgentLoop is
+  // visible as queued → running → done/failed instead of vanishing into a
+  // private executor. The provider owns the queue's lifecycle
+  // (init/monitor/dispose); the agent must not dispose it.
   final agent = AgentFactory.create(
     llmService: llmService,
     modelId: modelId,
@@ -358,15 +369,9 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
         prepBudget.isPrepEnabledForSubject(subjectId),
     usageMeter: usageMeter,
     prepBudgetService: ref.watch(prepBudgetServiceProvider),
+    idleExecutor: ref.watch(idleExecutorProvider),
   );
 
-  // Vision Next-Term §4.3/§4.4: cancel the polling timer and flush the queue
-  // when this agent is no longer observed (e.g. the screen is popped). Without
-  // this the 30s Timer.periodic created in AgentFactory.create() leaks for the
-  // lifetime of the process. AgentFactory.create() already opens the box via
-  // IdleExecutor.init(); here we only attach the scope teardown. Mirrors
-  // ingestion_providers.dart:181 `ref.onDispose(executor.dispose)`.
-  ref.onDispose(() => agent.idleExecutor.dispose());
   return agent;
 });
 

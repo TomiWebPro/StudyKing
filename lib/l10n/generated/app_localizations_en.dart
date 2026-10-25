@@ -6558,6 +6558,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Preparation budget is off — prep tasks are paused';
 
   @override
+  String get prepQueuedSectionTitle => 'Queued preparation';
+
+  @override
+  String get prepDeferredQuietHours => 'Waiting for quiet hours to end';
+
+  @override
+  String get prepDeferredSystemLoad => 'Waiting for the device to cool down';
+
+  @override
+  String get prepDeferredSubjectDisabled =>
+      'Paused — preparation is off for this subject';
+
+  @override
+  String get prepDeferredBudget =>
+      'Paused — this category\'s preparation budget is used up';
+
+  @override
+  String get prepTryNow => 'Try now';
+
+  @override
   String get tokenAllocation => 'Token allocation';
 
   @override

@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/providers/idle_executor_providers.dart';
+import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/features/llm_tasks/providers/llm_task_providers.dart';
@@ -368,6 +370,37 @@ void main() {
         expect(container.read(totalTaskTokensProvider), 50);
         expect(container.read(totalTaskCostProvider), closeTo(0.001, 0.0001));
         expect(container.read(taskTokenUsageProvider)['chat'], 50);
+      });
+    });
+
+    group('prepQueueServiceProvider (Vision Next-Term §4.2 deferred visibility)',
+        () {
+      test('exposes deferred prep from the shared executor and cancels it',
+          () async {
+        final executor = IdleExecutor(shouldDeferForQuietHours: (_) => true);
+        addTearDown(executor.dispose);
+        await executor.enqueue('deferred pdf parse', () async {});
+
+        final container = ProviderContainer(
+          overrides: [
+            idleExecutorProvider.overrideWithValue(executor),
+            llmTaskManagerProvider.overrideWith((ref) => _FakeLlmTaskManager([])),
+          ],
+        );
+        addTearDown(() => container.dispose());
+
+        final service = container.read(prepQueueServiceProvider);
+        expect(identical(container.read(prepQueueServiceProvider), service), isTrue,
+            reason: 'the portal bridge must be a singleton per scope');
+
+        final queued = container.read(queuedPrepTasksProvider);
+        expect(queued, hasLength(1));
+        expect(queued.single.description, 'deferred pdf parse');
+        expect(queued.single.deferredReason, PrepDeferralReason.quietHours);
+
+        expect(service.cancel(queued.single.id), isTrue);
+        expect(container.read(queuedPrepTasksProvider), isEmpty,
+            reason: 'cancelling from the portal must clear the visible queue');
       });
     });
 

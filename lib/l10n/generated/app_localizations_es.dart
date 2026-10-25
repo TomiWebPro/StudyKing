@@ -6629,6 +6629,28 @@ class AppLocalizationsEs extends AppLocalizations {
       'El presupuesto de preparación está desactivado; las tareas de preparación están pausadas';
 
   @override
+  String get prepQueuedSectionTitle => 'Preparación en cola';
+
+  @override
+  String get prepDeferredQuietHours =>
+      'Esperando a que terminen las horas de silencio';
+
+  @override
+  String get prepDeferredSystemLoad =>
+      'Esperando a que el dispositivo se enfríe';
+
+  @override
+  String get prepDeferredSubjectDisabled =>
+      'En pausa: la preparación está desactivada para esta asignatura';
+
+  @override
+  String get prepDeferredBudget =>
+      'En pausa: el presupuesto de preparación de esta categoría está agotado';
+
+  @override
+  String get prepTryNow => 'Probar ahora';
+
+  @override
   String get tokenAllocation => 'Distribución de tokens';
 
   @override

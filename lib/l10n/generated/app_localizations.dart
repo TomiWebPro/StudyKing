@@ -10737,6 +10737,42 @@ abstract class AppLocalizations {
   /// **'Preparation budget is off — prep tasks are paused'**
   String get prepBudgetDisabled;
 
+  /// Section title listing off-period prep jobs that are waiting to run
+  ///
+  /// In en, this message translates to:
+  /// **'Queued preparation'**
+  String get prepQueuedSectionTitle;
+
+  /// Reason shown for a prep job deferred by the student's quiet-hours window
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for quiet hours to end'**
+  String get prepDeferredQuietHours;
+
+  /// Reason shown for a heavy prep job deferred under CPU or battery pressure
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the device to cool down'**
+  String get prepDeferredSystemLoad;
+
+  /// Reason shown for a prep job deferred because the student disabled prep for its subject
+  ///
+  /// In en, this message translates to:
+  /// **'Paused — preparation is off for this subject'**
+  String get prepDeferredSubjectDisabled;
+
+  /// Reason shown for a prep job deferred because the category token cap is exhausted
+  ///
+  /// In en, this message translates to:
+  /// **'Paused — this category\'s preparation budget is used up'**
+  String get prepDeferredBudget;
+
+  /// Button that asks the prep queue to run a deferred job immediately
+  ///
+  /// In en, this message translates to:
+  /// **'Try now'**
+  String get prepTryNow;
+
   /// Section title for the prep-vs-live token allocation split
   ///
   /// In en, this message translates to:

@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/providers/prep_budget_providers.dart';
+import 'package:studyking/core/services/llm_agent/idle_executor.dart'
+    show IdleTask, PrepDeferralReason;
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/prep_budget.dart';
 import 'package:studyking/features/llm_tasks/services/llm_task_service.dart';
+import 'package:studyking/features/llm_tasks/services/prep_queue_service.dart';
 import 'package:studyking/core/constants/timeouts.dart';
 import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
@@ -100,6 +103,12 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
     final hasTokenData = tasks.any((t) => t.tokensUsed > 0);
     final taskManager = ref.watch(llmTaskManagerProvider);
     final budgetService = ref.watch(prepBudgetServiceProvider);
+    // Vision Next-Term §4.2: queued/deferred prep jobs never become LlmTasks
+    // until they start, so the portal must also read the shared prep queue to
+    // show work that quiet hours / device load / subject opt-out / budget are
+    // pausing.
+    final prepQueue = ref.watch(prepQueueServiceProvider);
+    final queuedPrep = prepQueue.queuedTasks;
 
     return Scaffold(
       appBar: AppBar(
@@ -143,7 +152,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
             ),
         ],
       ),
-      body: tasks.isEmpty
+      body: tasks.isEmpty && queuedPrep.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -158,6 +167,9 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
             )
           : Column(
               children: [
+                if (queuedPrep.isNotEmpty)
+                  _buildQueuedPrepSection(context, l10n, prepQueue, queuedPrep),
+                if (queuedPrep.isNotEmpty) const Divider(height: 1),
                 _buildPrepBudgetBars(context, l10n, budgetService),
                 const Divider(height: 1),
                 if (hasTokenData) _buildTokenUsageMeter(context, tasks, l10n, budgetService),
@@ -419,6 +431,147 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
 
   String _formatTokens(int tokens, String localeName) {
     return formatCompactNumber(tokens, localeName);
+  }
+
+  /// Vision Next-Term §4.2: "All prep jobs are visible tasks
+  /// (queued → running → done/failed …)". Deferred prep has no [LlmTask] yet,
+  /// so these cards come from the shared [PrepQueueService] and explain why
+  /// each job is waiting, with cancel + try-now actions.
+  Widget _buildQueuedPrepSection(
+    BuildContext context,
+    AppLocalizations l10n,
+    PrepQueueService queue,
+    List<IdleTask> queuedTasks,
+  ) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: ResponsiveUtils.cardPadding(context),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.pause_circle_outline, size: 18, color: cs.tertiary),
+              const SizedBox(width: 8),
+              Text(
+                l10n.prepQueuedSectionTitle,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const Spacer(),
+              Text(
+                '${queuedTasks.length}',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...queuedTasks.map(
+            (task) => _buildQueuedPrepCard(context, l10n, queue, task),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQueuedPrepCard(
+    BuildContext context,
+    AppLocalizations l10n,
+    PrepQueueService queue,
+    IdleTask task,
+  ) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.hourglass_empty, size: 18, color: cs.tertiary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    task.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: cs.tertiary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    l10n.llmStatusQueued,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: cs.tertiary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _deferralReasonLabel(l10n, task.deferredReason),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+            ),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Wrap(
+                spacing: 4,
+                children: [
+                  if (task.deferredReason != null)
+                    TextButton.icon(
+                      onPressed: queue.retryNow,
+                      icon: const Icon(Icons.play_arrow, size: 18),
+                      label: Text(l10n.prepTryNow),
+                    ),
+                  TextButton.icon(
+                    onPressed: () => queue.cancel(task.id),
+                    icon: const Icon(Icons.close, size: 18),
+                    label: Text(l10n.cancelTask),
+                    style: TextButton.styleFrom(foregroundColor: cs.error),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _deferralReasonLabel(
+    AppLocalizations l10n,
+    PrepDeferralReason? reason,
+  ) {
+    switch (reason) {
+      case PrepDeferralReason.quietHours:
+        return l10n.prepDeferredQuietHours;
+      case PrepDeferralReason.systemLoad:
+        return l10n.prepDeferredSystemLoad;
+      case PrepDeferralReason.subjectDisabled:
+        return l10n.prepDeferredSubjectDisabled;
+      case PrepDeferralReason.budgetExhausted:
+        return l10n.prepDeferredBudget;
+      case null:
+        return l10n.llmStatusQueued;
+    }
   }
 
   Widget _buildPrepBudgetBars(

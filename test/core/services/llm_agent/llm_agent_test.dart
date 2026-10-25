@@ -363,6 +363,26 @@ void main() {
     });
 
     test(
+        'injected shared prep queue is reused and NOT disposed with the agent '
+        '(Vision Next-Term §4.2: one queue feeds the task portal)', () async {
+      final shared = FakeIdleExecutor();
+      final agent = AgentFactory.create(
+        llmService: _FakeLlmService(),
+        modelId: 'gpt-4',
+        studentId: 'student1',
+        idleExecutor: shared,
+      );
+
+      expect(identical(agent.idleExecutor, shared), isTrue,
+          reason: 'the agent must defer prep into the app-wide queue');
+
+      await agent.dispose();
+
+      expect(shared.disposed, isFalse,
+          reason: 'the queue provider owns the shared queue lifecycle');
+    });
+
+    test(
         'create initializes the IdleExecutor so post-lesson prep tasks '
         'survive a simulated app restart', () async {
       // Vision Next-Term §4.2: TutorService.endLesson() enqueues post-lesson

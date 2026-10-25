@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, localeProvider, planOrchestratorProvider;
+import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, localeProvider, notificationServiceProvider, planOrchestratorProvider;
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider, spacedRepetitionServiceProvider;
 import 'package:studyking/core/providers/llm_agent_providers.dart' show longTermMemoryProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider, modelRouterProvider, llmTaskManagerProvider, llmUsageMeterProvider;
@@ -58,6 +58,7 @@ final preGenerateLessonToolProvider = Provider<PreGenerateLessonTool?>((ref) {
     taskManager: ref.watch(llmTaskManagerProvider),
     usageMeter: ref.watch(llmUsageMeterProvider),
     budgetService: ref.watch(prepBudgetServiceProvider),
+    notificationService: ref.watch(notificationServiceProvider),
   );
 });
 

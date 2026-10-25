@@ -16,6 +16,11 @@ class LlmAgent {
   final IdleExecutor _idleExecutor;
   final String _studentId;
 
+  /// Whether [dispose] should tear down [_idleExecutor]. False when the agent
+  /// was handed a shared off-period queue (e.g. the app-wide
+  /// `idleExecutorProvider`, Vision Next-Term §4.2) that outlives this agent.
+  final bool _ownsIdleExecutor;
+
   ToolRegistry get toolRegistry => _toolRegistry;
   AgentMemoryStore get memory => _memoryStore;
   IdleExecutor get idleExecutor => _idleExecutor;
@@ -27,11 +32,13 @@ class LlmAgent {
     required AgentMemoryStore memoryStore,
     required IdleExecutor idleExecutor,
     required String studentId,
+    bool ownsIdleExecutor = true,
   })  : _loop = loop,
         _toolRegistry = toolRegistry,
         _memoryStore = memoryStore,
         _idleExecutor = idleExecutor,
-        _studentId = studentId;
+        _studentId = studentId,
+        _ownsIdleExecutor = ownsIdleExecutor;
 
   Future<AgentResponse> chat({
     required String message,
@@ -123,7 +130,11 @@ class LlmAgent {
   Future<void> rememberFact(String key, String value) => _memoryStore.rememberFact(_studentId, key, value);
 
   Future<void> dispose() async {
-    _idleExecutor.dispose();
+    // A shared queue belongs to whoever provided it (the app-wide provider);
+    // disposing it here would kill prep for every other owner.
+    if (_ownsIdleExecutor) {
+      _idleExecutor.dispose();
+    }
   }
 }
 
@@ -139,6 +150,7 @@ class AgentFactory {
     bool Function(String subjectId)? isPrepEnabledForSubject,
     LlmUsageMeter? usageMeter,
     PrepBudgetService? prepBudgetService,
+    IdleExecutor? idleExecutor,
   }) {
     final toolRegistry = ToolRegistry();
     if (tools != null) {
@@ -148,37 +160,47 @@ class AgentFactory {
     }
 
     final memoryStore = AgentMemoryStore();
-    final idleExecutor = IdleExecutor(
-      llmTaskManager: taskManager,
-      studentId: studentId,
-      systemMonitor: systemMonitor,
-      shouldDeferForQuietHours: shouldDeferForQuietHours,
-      isPrepEnabledForSubject: isPrepEnabledForSubject,
-      usageMeter: usageMeter,
-      prepBudgetService: prepBudgetService,
-    );
-    // Vision Next-Term §4.2: open the idle-tasks box and restore any queued
-    // prep tasks before starting the polling monitor, so post-lesson work
-    // enqueued by TutorService.endLesson() survives process termination.
-    // Mirrors ingestion_providers.dart:179 (init() before startIdleMonitoring).
-    // init() is fire-and-forget and non-throwing (see IdleExecutor.init).
-    idleExecutor.init();
-    idleExecutor.startIdleMonitoring();
+    // Vision Next-Term §4.2: prefer the app-wide off-period queue so prep the
+    // mentor defers through AgentLoop is the SAME queue the task-manager portal
+    // renders (queued → running → done/failed). Without a shared queue the
+    // mentor's prep lived in a private executor the portal could not see.
+    // Only self-construct (and own) a queue when nothing was injected.
+    final ownsExecutor = idleExecutor == null;
+    final executor = idleExecutor ??
+        IdleExecutor(
+          llmTaskManager: taskManager,
+          studentId: studentId,
+          systemMonitor: systemMonitor,
+          shouldDeferForQuietHours: shouldDeferForQuietHours,
+          isPrepEnabledForSubject: isPrepEnabledForSubject,
+          usageMeter: usageMeter,
+          prepBudgetService: prepBudgetService,
+        );
+    if (ownsExecutor) {
+      // Vision Next-Term §4.2: open the idle-tasks box and restore any queued
+      // prep tasks before starting the polling monitor, so post-lesson work
+      // enqueued by TutorService.endLesson() survives process termination.
+      // Mirrors ingestion_providers.dart (init() before startIdleMonitoring).
+      // init() is fire-and-forget and non-throwing (see IdleExecutor.init).
+      executor.init();
+      executor.startIdleMonitoring();
+    }
 
     final loop = AgentLoop(
       llmService: llmService,
       modelId: modelId,
       toolRegistry: toolRegistry,
       taskManager: taskManager,
-      idleExecutor: idleExecutor,
+      idleExecutor: executor,
     );
 
     return LlmAgent(
       loop: loop,
       toolRegistry: toolRegistry,
       memoryStore: memoryStore,
-      idleExecutor: idleExecutor,
+      idleExecutor: executor,
       studentId: studentId,
+      ownsIdleExecutor: ownsExecutor,
     );
   }
 }

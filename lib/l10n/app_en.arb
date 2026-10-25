@@ -8616,6 +8616,30 @@
   "@prepBudgetDisabled": {
     "description": "Caption shown when the preparation budget master switch is off"
   },
+  "prepQueuedSectionTitle": "Queued preparation",
+  "@prepQueuedSectionTitle": {
+    "description": "Section title listing off-period prep jobs that are waiting to run"
+  },
+  "prepDeferredQuietHours": "Waiting for quiet hours to end",
+  "@prepDeferredQuietHours": {
+    "description": "Reason shown for a prep job deferred by the student's quiet-hours window"
+  },
+  "prepDeferredSystemLoad": "Waiting for the device to cool down",
+  "@prepDeferredSystemLoad": {
+    "description": "Reason shown for a heavy prep job deferred under CPU or battery pressure"
+  },
+  "prepDeferredSubjectDisabled": "Paused — preparation is off for this subject",
+  "@prepDeferredSubjectDisabled": {
+    "description": "Reason shown for a prep job deferred because the student disabled prep for its subject"
+  },
+  "prepDeferredBudget": "Paused — this category's preparation budget is used up",
+  "@prepDeferredBudget": {
+    "description": "Reason shown for a prep job deferred because the category token cap is exhausted"
+  },
+  "prepTryNow": "Try now",
+  "@prepTryNow": {
+    "description": "Button that asks the prep queue to run a deferred job immediately"
+  },
   "tokenAllocation": "Token allocation",
   "@tokenAllocation": {
     "description": "Section title for the prep-vs-live token allocation split"

@@ -123,6 +123,7 @@ class MentorService {
       focusService: _focusService,
       llmConfig: _llmService.config,
       readinessScorer: _readinessScorer,
+      agentMemoryStore: _agent?.memory,
     );
     _wellbeingService = MentorWellbeingService(
       sessionRepository: _sessionRepository,
@@ -174,7 +175,21 @@ class MentorService {
       final statsResult = await _progressTracker.getOverallStats(_studentId);
       final stats = statsResult.data ?? <String, dynamic>{};
       final attempts = stats['totalAttempts'] as int? ?? 0;
-      return attempts > 0 || hasSubjects;
+
+      // Vision Next-Term §3.1 (scenario_new_user_learn_chemistry): a student
+      // who has uploaded a syllabus or other materials but not yet created
+      // subjects must NOT be routed to the empty-start path. The source
+      // inventory is best-effort — a repository failure degrades to false so
+      // the existing subjects/attempts verdict is unchanged.
+      var hasMaterials = false;
+      final sourcesResult = await _sourceRepository.getByStudent(_studentId);
+      if (sourcesResult.isSuccess &&
+          sourcesResult.data != null &&
+          sourcesResult.data!.isNotEmpty) {
+        hasMaterials = true;
+      }
+
+      return attempts > 0 || hasSubjects || hasMaterials;
     }, context: 'hasMeaningfulData');
     return result;
   }

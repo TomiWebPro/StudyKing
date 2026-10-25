@@ -23,6 +23,36 @@ import 'package:studyking/core/utils/logger.dart';
 /// registered reconstructor).
 typedef TaskReconstructor = Future<void> Function()? Function(IdleTask task);
 
+/// Why a queued [IdleTask] has not started yet.
+///
+/// Vision Next-Term §4.2 requires prep jobs to be visible as
+/// `queued → running → done/failed` in the task-manager portal. A job that a
+/// gate defers used to leave no trace anywhere a student could see (only a
+/// debug log), so the portal looked idle while prep was merely paused.
+/// Recording the reason on the task lets the portal say *why* the work is
+/// waiting and offer cancel / try-now affordances.
+enum PrepDeferralReason {
+  /// Inside the student's quiet-hours window.
+  quietHours,
+
+  /// Device under CPU/battery pressure (§4.3).
+  systemLoad,
+
+  /// The student paused prep for this syllabus (§4.2 per-subject opt-in).
+  subjectDisabled,
+
+  /// The category's preparation token budget is exhausted (§4.2/§4.4).
+  budgetExhausted,
+}
+
+PrepDeferralReason? _parseDeferralReason(Object? name) {
+  if (name is! String) return null;
+  for (final reason in PrepDeferralReason.values) {
+    if (reason.name == name) return reason;
+  }
+  return null;
+}
+
 class IdleTask {
   final String id;
   final String description;
@@ -61,6 +91,15 @@ class IdleTask {
   bool isCompleted;
   String? error;
 
+  /// Reason this task is currently waiting, or `null` when no gate is
+  /// deferring it (e.g. it is about to run, or it already ran).
+  ///
+  /// Mutated by [IdleExecutor] on every deferral and cleared when execution
+  /// starts, so the task-manager portal can render
+  /// `queued (deferred: quiet hours / device load / subject paused / budget)`
+  /// instead of hiding paused prep work (Vision Next-Term §4.2).
+  PrepDeferralReason? deferredReason;
+
   /// Pre-run token estimate supplied by the enqueuing [PrepTool] so the
   /// [IdleExecutor] budget gate can consult
   /// [PrepBudgetService.canSpend] *before* creating the parent
@@ -84,6 +123,7 @@ class IdleTask {
     this.isRunning = false,
     this.isCompleted = false,
     this.error,
+    this.deferredReason,
     this.estimatedInputTokens = 0,
     this.estimatedOutputTokens = 0,
   });
@@ -104,6 +144,7 @@ class IdleTask {
         'isRunning': isRunning,
         'isCompleted': isCompleted,
         'error': error,
+        'deferredReason': deferredReason?.name,
         'estimatedInputTokens': estimatedInputTokens,
         'estimatedOutputTokens': estimatedOutputTokens,
       };
@@ -123,6 +164,9 @@ class IdleTask {
         isRunning: false,
         isCompleted: json['isCompleted'] as bool? ?? false,
         error: json['error'] as String?,
+        // A persisted deferral reason is only informational; the executor
+        // re-evaluates every gate on the next poll and overwrites it then.
+        deferredReason: _parseDeferralReason(json['deferredReason']),
         estimatedInputTokens: (json['estimatedInputTokens'] as num?)?.toInt() ?? 0,
         estimatedOutputTokens: (json['estimatedOutputTokens'] as num?)?.toInt() ?? 0,
       );
@@ -326,6 +370,41 @@ class IdleExecutor {
   List<IdleTask> get queue => List.unmodifiable(_queue);
   bool get hasPendingTasks => _queue.any((t) => !t.isCompleted && !t.isRunning);
 
+  /// Tasks that are waiting to run (neither running nor completed), including
+  /// ones a gate is currently deferring. This is the executor's contribution to
+  /// the task-manager portal's "queued" section (Vision Next-Term §4.2): pair it
+  /// with [IdleTask.deferredReason] to explain *why* prep is waiting.
+  List<IdleTask> get queuedTasks =>
+      List.unmodifiable(_queue.where((t) => !t.isCompleted && !t.isRunning));
+
+  /// Removes a waiting task from the queue, e.g. when the student cancels it
+  /// from the task portal. Running tasks cannot be cancelled this way (their
+  /// [IdleTask.taskFn] is already executing and has no cancellation channel);
+  /// returns `false` for a running or unknown id.
+  bool cancelQueuedTask(String taskId) {
+    final index = _queue.indexWhere((t) => t.id == taskId);
+    if (index == -1 || _queue[index].isRunning) return false;
+    _queue.removeAt(index);
+    _persist();
+    _notify();
+    return true;
+  }
+
+  /// Runs the next queued task immediately if every gate now allows it - the
+  /// portal's "try now" action for a student who wants to resume deferred prep
+  /// instead of waiting for quiet hours to end or the polling timer to fire.
+  /// No-op while another task is executing (the poll will pick it up).
+  Future<void> retryDeferredNow() => _tryExecuteNext();
+
+  /// Records that [task] is deferred and why, notifying portal listeners only
+  /// when the reason actually changes (the poll re-runs gates every 30s).
+  void _markDeferred(IdleTask task, PrepDeferralReason reason) {
+    if (task.deferredReason == reason) return;
+    task.deferredReason = reason;
+    _persist();
+    _notify();
+  }
+
   Future<void> startIdleMonitoring({Duration interval = const Duration(seconds: 30)}) async {
     _idleCheckTimer?.cancel();
     _idleCheckTimer = Timer.periodic(interval, (_) => _tryExecuteNext());
@@ -421,6 +500,7 @@ class IdleExecutor {
       _logger.d(
         'Deferring task "${next.description}" - within quiet hours',
       );
+      _markDeferred(next, PrepDeferralReason.quietHours);
       return;
     }
 
@@ -431,6 +511,7 @@ class IdleExecutor {
       _logger.w(
         'Deferring heavy prep task "${next.description}" - system under load',
       );
+      _markDeferred(next, PrepDeferralReason.systemLoad);
       return;
     }
 
@@ -448,6 +529,7 @@ class IdleExecutor {
       _logger.d(
         'Deferring task "${next.description}" - subject "$subjectId" prep disabled by student',
       );
+      _markDeferred(next, PrepDeferralReason.subjectDisabled);
       return;
     }
 
@@ -474,6 +556,7 @@ class IdleExecutor {
           '(${_prepBudgetService.remainingFor(category)} tokens remaining; '
           'estimated $estimatedTokens needed, will retry on next poll)',
         );
+        _markDeferred(next, PrepDeferralReason.budgetExhausted);
         return;
       }
     }
@@ -505,6 +588,9 @@ class IdleExecutor {
 
     _isExecuting = true;
     next.isRunning = true;
+    // Every gate passed: the task is no longer deferred, so the portal must
+    // stop showing a pause reason for it (Vision Next-Term §4.2).
+    next.deferredReason = null;
     _persist();
 
     final manager = _llmTaskManager;
