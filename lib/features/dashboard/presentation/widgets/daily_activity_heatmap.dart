@@ -197,11 +197,13 @@ class DailyActivityHeatmap extends StatelessWidget {
       children: [
         Icon(Icons.calendar_view_day, color: theme.colorScheme.primary),
         const SizedBox(width: 8),
-        Semantics(
-          headingLevel: 3,
-          child: Text(
-            l10n.heatmapTitle,
-            style: theme.textTheme.titleMedium,
+        Flexible(
+          child: Semantics(
+            headingLevel: 3,
+            child: Text(
+              l10n.heatmapTitle,
+              style: theme.textTheme.titleMedium,
+            ),
           ),
         ),
       ],
