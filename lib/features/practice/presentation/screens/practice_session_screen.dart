@@ -519,8 +519,54 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         Navigator.pop(context);
         completer.complete(true);
       },
+      // Vision §question system: a wrong answer's review must offer the next
+      // remediation step — re-test the concept with an already-generated
+      // variant, or book a follow-up lesson via the mentor.
+      onTryVariant: (mistake) {
+        Navigator.pop(context);
+        _startVariantRedo(mistake);
+        completer.complete(false);
+      },
+      onScheduleLesson: (mistake) {
+        final navigator = Navigator.of(context);
+        Navigator.pop(context);
+        completer.complete(true);
+        // Finalize the practice session first (the caller pops this screen
+        // with the results), then land the student in the mentor to book a
+        // remedial lesson on the weak concept.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          navigator.pushNamed(AppRoutes.mentor);
+        });
+      },
     );
     return completer.future;
+  }
+
+  /// Restarts a focused re-test with a fresh variant of [mistake]'s question,
+  /// so the student can close the remediation loop without re-answering the
+  /// exact same text (Vision: "expanded through generated variants").
+  /// Prefers an already-generated variant; [QuestionVariantService]
+  /// falls back to the original question when none exists.
+  Future<void> _startVariantRedo(MistakeEntry mistake) async {
+    final result = await _variantService.selectVariantForRetry(
+      mistake.question,
+    );
+    final question = result.data ?? mistake.question;
+    if (!mounted) return;
+    setState(() {
+      _questions = [question];
+      _currentIndex = 0;
+      _correctAnswers = 0;
+      _mistakeQuestionIds.clear();
+      _answerRecords.clear();
+      _isSessionComplete = false;
+      _sessionAutoSaved = false;
+      _currentAnswer = null;
+      _isSubmitted = false;
+      _isSubmitting = false;
+      _isFeedbackVisible = false;
+    });
+    _sessionService.startTimer();
   }
 
   void _startMistakeRedo(List<MistakeEntry> mistakes) {

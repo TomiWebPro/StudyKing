@@ -1139,6 +1139,10 @@
     }
   },
   "generateVariants": "Generate variants",
+  "tryVariant": "Try Variant",
+  "@tryVariant": {
+    "description": "Button in the mistake-review sheet: re-test the concept with an already-generated question variant"
+  },
   "variantsGenerated": "Generated {count} variants",
   "@variantsGenerated": {
     "description": "Confirmation that variants were generated",

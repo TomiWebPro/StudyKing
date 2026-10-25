@@ -15,7 +15,7 @@
 |------|------------|-------------|--------|
 | 1. Student starts a practice session on a topic | The mentor should create a practice session targeting the student's current mastery level, pulling questions from the question bank. | `lib/features/mentor/services/tools/create_practice_session_tool.dart` — `CreatePracticeSessionTool` exists and is registered (`llmAgentToolsProvider:87-94`). Uses `ReadinessScorer` to pick question difficulty. | PASS |
 | 2. Student answers a question incorrectly | The system should log the attempt, identify the weak sub-topic, and adapt — serving easier questions on the same concept or redirecting to a prerequisite. | `lib/features/practice/services/readiness_scorer.dart:16` — readiness scoring exists. `MasteryGraphService.getWeakTopics` (`lib/core/services/mastery_graph_service.dart`) tracks weak topics. `lib/features/practice/data/repositories/mastery_graph_repository.dart` persists mastery state. | PARTIAL |
-| 3. Student reviews mistakes after the session | The system should show a breakdown of wrong answers, the underlying concept, and link to a remediation lesson or question variants. | `lib/features/practice/services/readiness_scorer.dart` — readiness data exists. `lib/features/mentor/services/tools/get_lesson_history_tool.dart` shows past lessons. No explicit "review mistakes" view; `lib/features/practice/` has `practice_sessions_repository.dart` but review UI is sparse. | PARTIAL |
+| 3. Student reviews mistakes after the session | The system should show a breakdown of wrong answers, the underlying concept, and link to a remediation lesson or question variants. | `lib/features/practice/presentation/widgets/mistake_review_widget.dart` — `MistakeReviewWidget` shows each wrong answer with the markscheme explanation, a **concept tag** (`MistakeEntry.conceptLabel`), **variant availability count**, and per-card remediation buttons: "Try Variant" (`_startVariantRedo` in `practice_session_screen.dart`) and "Schedule Lesson" (routes to `/mentor`). | PASS |
 | 4. System schedules a follow-up lesson on weak areas | After detecting weak topics via `get_weak_topics`, the mentor should propose scheduling a lesson on the struggling concept with confirmation. | `lib/features/mentor/services/tools/get_weak_topics_tool.dart:9` — registered (`llp_agent_providers.dart:74-77`). `ScheduleLessonTool` registered at `llp_agents_providers.dart:64`. Mentor uses `_pendingSchedule` for confirmation (`mentor_service.dart:359-370`). | PASS |
 | 5. Student sees updated mastery progress | The mastery graph should reflect the practice and show improvement over time. | `lib/core/data/models/mastery_state_model.dart:1` — `MasteryState` model tracks `accuracy`, `reviewUrgency`, `readinessScore`. `lib/features/practice/data/repositories/mastery_graph_repository.dart` persists per-topic mastery. `get_student_stats` tool (`get_student_stats_tool.dart:9`) surfaces stats. | PARTIAL |
 
@@ -43,15 +43,14 @@
 | Past session results (mistakes, time spent) | YES | `mentor_context_builder.dart:323-335` — `_buildMistakeLines()` injects per-question accuracy snapshot; `mentor_context_builder.dart:337-369` injects today's study time + per-subject breakdown |
 | Lesson history (remediation links) | YES | `mentor_context_builder.dart` — `loadUpcomingLessons`; `get_lesson_history_tool.dart` available |
 
-**Gap:** None for context injection. Remaining PARTIAL (Steps 3 & 5): no dedicated review-mistakes UI — the `ReviewMistakesTool` agent tool exists but lacks a student-facing review screen.
-→ File `issues/open/scenario-review-mistakes-ui-missing.md`
+**Gap:** None for context injection or the review surface. Step 3 (review-mistakes UI) is now PASS — `MistakeReviewWidget` renders concept tag + variant availability + remediation actions, wired from `practice_session_screen.dart`. Step 5 (mastery progress in the review UI) remains PARTIAL — mastery stats are shown via `get_student_stats` but not inside the review sheet itself.
 
 ## Comprehension rubric
 
 | Criterion | Assessment |
 |---|---|
 | Reading level | PASS — `l10n` strings keep feedback at ~6th-grade level. |
-| Actionability (one clear next action) | PARTIAL — after review, the system shows weak topics but does not surface exactly one next action (review vs. schedule vs. practice). |
+| Actionability (one clear next action) | PASS — the review sheet surfaces per-card remediation (Try Variant when variants exist, Schedule Lesson) plus the bottom-row Redo, giving exactly one clear next step per mistake. |
 | Confirmation discipline (no silent schedule changes) | PASS — `MentorService._pendingSchedule` enforces explicit confirmation (`mentor_service.dart:359`). |
 
 ## Validation Results
@@ -65,11 +64,11 @@ Traced against code at:
 
 - Step 1: PASS — `CreatePracticeSessionTool` is registered and callable from the agent.
 - Step 2: PASS — readiness scoring feeds back into the LLM context via `MentorContextBuilder` (readiness scores + recent accuracy trend injected at `mentor_context_builder.dart:300-321`).
-- Step 3: PARTIAL — no dedicated review-mistakes tool or view.
+- Step 3: PASS — `MistakeReviewWidget` (`mistake_review_widget.dart`) shows each wrong answer with markscheme explanation, concept tag, variant availability, and Try Variant / Schedule Lesson remediation actions, wired from `practice_session_screen.dart:_showMistakeReview`.
 - Step 4: PASS — `get_weak_topics` + `schedule_lesson` are reachable through AgentLoop.
 - Step 5: PARTIAL — mastery model tracks stats but review UI is sparse.
 
 Tool audit: 6 of 6 needed tools exist; `review_mistakes` is FOUND.
 RESULT: all needed tools available (0 missing).
 Context audit: readiness scores, recent accuracy trend, and per-question mistake snapshot all injected into mentor context (`mentor_context_builder.dart:300-335`).
-**Last re-traced:** 2026-10-21 against current HEAD (`mentor_context_builder_test.dart` readiness-scores group, lines 1640-1706).
+**Last re-traced:** 2026-10-25 against current HEAD (`mistake_review_widget.dart` concept tag + variant availability + remediation buttons; widget tests in `mistake_review_widget_test.dart`).

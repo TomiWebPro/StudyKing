@@ -1139,6 +1139,10 @@
     }
   },
   "generateVariants": "Generar variantes",
+  "tryVariant": "Probar variante",
+  "@tryVariant": {
+    "description": "Botón en la hoja de revisión de errores: volver a probar el concepto con una variante de pregunta ya generada"
+  },
   "variantsGenerated": "Generadas {count} variantes",
   "@variantsGenerated": {
     "description": "Confirmation that variants were generated",

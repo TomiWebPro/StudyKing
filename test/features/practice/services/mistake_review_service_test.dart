@@ -388,6 +388,55 @@ void main() {
   });
 
 
+  group('MistakeEntry derived metadata', () {
+    Question questionWith({
+      String? topic,
+      String topicId = 't1',
+      List<String> variantIds = const [],
+    }) {
+      return Question(
+        id: 'q1',
+        text: 'Test?',
+        type: QuestionType.singleChoice,
+        subjectId: 'sub1',
+        topicId: topicId,
+        topic: topic,
+        variantIds: variantIds,
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
+      );
+    }
+
+    MistakeEntry entryFor(Question q) =>
+        MistakeEntry(question: q, correctAnswer: 'A');
+
+    test('conceptLabel prefers the human topic label', () {
+      expect(entryFor(questionWith(topic: 'Algebra')).conceptLabel, 'Algebra');
+    });
+
+    test('conceptLabel falls back to topicId when topic is empty', () {
+      expect(entryFor(questionWith(topic: '')).conceptLabel, 't1');
+    });
+
+    test('conceptLabel falls back to topicId when topic is null', () {
+      expect(entryFor(questionWith(topic: null)).conceptLabel, 't1');
+    });
+
+    test('conceptLabel is null when both topic and topicId are empty', () {
+      final entry = entryFor(questionWith(topic: '', topicId: ''));
+      expect(entry.conceptLabel, isNull);
+    });
+
+    test('variantCount mirrors question.variantIds length', () {
+      expect(entryFor(questionWith(variantIds: [])).variantCount, 0);
+      expect(entryFor(questionWith(variantIds: ['v1'])).variantCount, 1);
+      expect(
+        entryFor(questionWith(variantIds: ['v1', 'v2', 'v3'])).variantCount,
+        3,
+      );
+    });
+  });
+
   group('MistakeReviewService - coverage gaps', () {
   late _FakeAttemptRepo3 attemptRepo;
   late _FakeQuestionRepo3 questionRepo;

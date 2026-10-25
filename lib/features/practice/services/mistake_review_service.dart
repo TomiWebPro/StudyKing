@@ -17,6 +17,24 @@ class MistakeEntry {
     required this.correctAnswer,
     this.explanation,
   });
+
+  /// Human-readable concept label for the mistake's question, used by the
+  /// review UI to surface which concept the student missed (vision: questions
+  /// "linked to topics/syllabi" and "identify weak areas"). Prefers the
+  /// human label [Question.topic], falling back to the raw [Question.topicId].
+  /// Null when neither is available so the card simply omits the tag.
+  String? get conceptLabel {
+    if (question.topic != null && question.topic!.isNotEmpty) {
+      return question.topic;
+    }
+    if (question.topicId.isNotEmpty) return question.topicId;
+    return null;
+  }
+
+  /// Number of already-generated variants linked from [Question.variantIds].
+  /// The review UI surfaces this so the student can see that a re-test with
+  /// fresh values is available without waiting for generation.
+  int get variantCount => question.variantIds.length;
 }
 
 class MistakeReviewService {

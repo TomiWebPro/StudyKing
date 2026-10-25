@@ -1598,6 +1598,12 @@ abstract class AppLocalizations {
   /// **'Generate variants'**
   String get generateVariants;
 
+  /// Button in the mistake-review sheet: re-test the concept with an already-generated question variant
+  ///
+  /// In en, this message translates to:
+  /// **'Try Variant'**
+  String get tryVariant;
+
   /// Confirmation that variants were generated
   ///
   /// In en, this message translates to:

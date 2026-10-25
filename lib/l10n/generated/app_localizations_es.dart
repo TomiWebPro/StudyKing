@@ -920,6 +920,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get generateVariants => 'Generar variantes';
 
   @override
+  String get tryVariant => 'Probar variante';
+
+  @override
   String variantsGenerated(int count) {
     return 'Generadas $count variantes';
   }
