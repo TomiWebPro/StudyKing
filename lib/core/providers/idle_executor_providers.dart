@@ -2,7 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/providers/llm_providers.dart'
     show llmTaskManagerProvider, llmUsageMeterProvider, systemMonitorServiceProvider;
 import 'package:studyking/core/providers/prep_budget_providers.dart'
-    show prepBudgetServiceProvider, prepBudgetSettingsProvider;
+    show
+        preparationGateProvider,
+        prepBudgetServiceProvider,
+        prepBudgetSettingsProvider;
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 
 /// The single off-period preparation queue (Vision Next-Term §4.1–§4.3).
@@ -22,19 +25,25 @@ import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 /// Quiet-hours and per-subject opt-in predicates come from the persisted
 /// [PrepBudget], and [PrepBudgetService] is injected so the executor can defer
 /// over-budget prep before creating a parent `LlmTask` (§4.2/§4.4).
+///
+/// Per-subject opt-in uses the reactive [preparationGateProvider] so that when
+/// the budget loads asynchronously the gate predicates update automatically —
+/// eliminating the race condition where an enqueued task would execute because
+/// `disabledSubjects` was still at its construction-time default (empty).
 final idleExecutorProvider = Provider<IdleExecutor>((ref) {
   final taskManager = ref.watch(llmTaskManagerProvider);
   final systemMonitor = ref.watch(systemMonitorServiceProvider);
-  final prepBudget = ref.watch(prepBudgetSettingsProvider);
+  final prepBudget = ref.read(prepBudgetSettingsProvider);
   final prepBudgetService = ref.watch(prepBudgetServiceProvider);
   final usageMeter = ref.watch(llmUsageMeterProvider);
+  final gate = ref.watch(preparationGateProvider);
   final executor = IdleExecutor(
     llmTaskManager: taskManager,
     studentId: 'default',
     systemMonitor: systemMonitor,
     shouldDeferForQuietHours: (now) => prepBudget.shouldDeferForQuietHours(now),
-    isPrepEnabledForSubject: (subjectId) =>
-        prepBudget.isPrepEnabledForSubject(subjectId),
+    isPrepEnabledForSubject: null, // Use reactive gate instead of capture-by-construction
+    preparationGate: gate,
     usageMeter: usageMeter,
     prepBudgetService: prepBudgetService,
   );

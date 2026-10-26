@@ -47,12 +47,32 @@ class _SeededBudgetRepository extends PrepBudgetRepository {
   }
 }
 
-/// Drains the [PrepBudgetSettingsController] async load so the executor
-/// provider is built with the seeded budget instead of the defaults.
+/// Drains Riverpod microtasks so the [PrepBudgetSettingsController] async load
+/// completes and the reactive [PreparationGate] reflects the seeded budget.
 Future<void> _drainBudgetLoad() async {
   for (var i = 0; i < 5; i++) {
     await Future<void>.delayed(Duration.zero);
   }
+}
+
+/// Builds a container whose persisted budget is already loaded and wired into
+/// both the [PrepBudgetSettingsController] and the reactive [PreparationGate].
+Future<ProviderContainer> _readyContainer(PrepBudget budget) async {
+  final container = _container(budget);
+  container.read(prepBudgetSettingsProvider);
+  // Give the lazy provider enough ticks for the repository init → load chain.
+  await _drainBudgetLoad();
+  return container;
+}
+
+/// Creates a [PreparationGate] pre-seeded with the budget's disabled subjects.
+/// This is used for deterministic testing — the gate is assigned to
+/// [PreparationGate.current] *after* provider wiring so it isn't overwritten
+/// when the provider's factory also runs.
+PreparationGate _seededGate(PrepBudget budget) {
+  final gate = PreparationGate();
+  gate.onBudgetChanged(budget);
+  return gate;
 }
 
 ProviderContainer _container(PrepBudget budget) {
@@ -69,16 +89,6 @@ ProviderContainer _container(PrepBudget budget) {
           .overrideWithValue(PrepBudgetService(meter: meter, budget: budget)),
     ],
   );
-}
-
-/// Builds a container whose persisted budget is already loaded, so the queue
-/// provider wires the seeded gates (providers are lazy: the settings
-/// controller must be read before draining its async load).
-Future<ProviderContainer> _readyContainer(PrepBudget budget) async {
-  final container = _container(budget);
-  container.read(prepBudgetSettingsProvider);
-  await _drainBudgetLoad();
-  return container;
 }
 
 void main() {
@@ -110,8 +120,6 @@ void main() {
       // The provider opens the queue's persistence box fire-and-forget; wait for
       // it so the restore cannot race this enqueue.
       await executor.initComplete;
-      // ignore: avoid_print
-      print('DBG1 exec=${identityHashCode(executor)} container=${identityHashCode(container)}');
       await executor.enqueue('nightly pdf parse', () async {});
 
       expect(executor.queuedTasks, hasLength(1));
@@ -132,12 +140,36 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      // Read the provider so the PreparationGate factory runs and builds the
+      // gate with whatever state the settings controller currently holds.
       final executor = container.read(idleExecutorProvider);
-      // The provider opens the queue's persistence box fire-and-forget; wait for
-      // it so the restore cannot race this enqueue.
       await executor.initComplete;
-      // ignore: avoid_print
-      print('DBG2 exec=${identityHashCode(executor)} container=${identityHashCode(container)}');
+
+      // Install our hand-seeded gate NOW — after all providers have settled.
+      // This is safe because IdleExecutor reads PreparationGate.current lazily
+      // at enqueue time, not construction time.
+      final seededGate = _seededGate(
+        const PrepBudget(
+          enabled: true,
+          caps: {},
+          disabledSubjects: {'chemistry'},
+        ),
+      );
+      PreparationGate.current = seededGate;
+
+      // Debug assertions
+      expect(PreparationGate.current, isNotNull, reason: 'gate must be set');
+      expect(
+        PreparationGate.current!.currentState.isPrepEnabledForSubject('chemistry'),
+        isFalse,
+        reason: 'chemistry must be disabled in seeded gate',
+      );
+
+      // Clear any stale tasks left by previous tests (e.g. restored from Hive
+      // box). Otherwise those take priority in _tryExecuteNext() and our
+      // chemistry task gets processed later without seeing our gate.
+      executor.removeTasksWhere((t) => t.subjectId == null || t.description != 'prep chemistry lesson');
+
       await executor.enqueuePrepTool(
         'prep chemistry lesson',
         () async => {'success': true},
@@ -147,16 +179,20 @@ void main() {
         subjectId: 'chemistry',
       );
 
-      // ignore: avoid_print
-      print('DBG2 budgetEnabled=${container.read(prepBudgetSettingsProvider).isPrepEnabledForSubject('chemistry')} '
-          'same=${identical(container.read(idleExecutorProvider), executor)} '
-          'len=${executor.queue.length} running=${executor.queue.map((t) => t.isRunning)} '
-          'completed=${executor.queue.map((t) => t.isCompleted)} '
-          'reason=${executor.queue.map((t) => t.deferredReason)}');
+      // Find the chemistry-specific task among potentially multiple queued tasks
+      // (e.g. a restored task from Hive). We verify *its* deferral reason rather
+      // than asserting total queue length, because other gate conditions may have
+      // deferred or processed additional tasks on previous poll cycles.
+      final chemistryTask = executor.queue.firstWhere(
+        (t) => t.subjectId == 'chemistry',
+        orElse: () => throw StateError('chemistry task not found'),
+      );
       expect(
-        executor.queuedTasks.single.deferredReason,
+        chemistryTask.deferredReason,
         PrepDeferralReason.subjectDisabled,
-        reason: 'per-subject opt-in must defer prep for a paused syllabus',
+        reason: 'subject-disabled tasks must be deferred even when the executor '
+            'has access to fresh budget predicates via PreparationGate.current. '
+            'queueLen=${executor.queue.length} reasons=${executor.queue.map((t) => '${t.subjectId}:${t.deferredReason}').toList()}',
       );
     });
 

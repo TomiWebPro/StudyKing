@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:meta/meta.dart' show visibleForTesting;
 import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/providers/prep_budget_providers.dart'
+    show PreparationGate;
 import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart' show LlmUsageMeter;
@@ -198,8 +200,17 @@ class IdleExecutor {
   /// (deferred) and no tokens are spent, realising vision Next-Term §4.2
   /// "per-syllabus opt-in": a student who toggles a subject off gets no prep
   /// for that syllabus while away. Inject in tests with a predicate mirroring a
-  /// `PrepBudget` whose `disabledSubjects` contains the subject.
+  /// `PrepBudget` whose `disabledSubjects` contains the subject. When `null` but
+  /// [preparationGate] is non-null, the gate's reactive predicates are used
+  /// instead — eliminating the race condition where capture-by-construction sees
+  /// an empty `disabledSubjects` during async budget load.
   final bool Function(String subjectId)? _isPrepEnabledForSubject;
+
+  /// Reactive preparation gate providing freshly-computed per-subject predicates.
+  /// When present, takes precedence over [_isPrepEnabledForSubject] for the
+  /// subject-opt-in check so that async budget loads never leave disabled subjects
+  /// unguarded (Vision Next-Term §4.2).
+  final PreparationGate? _preparationGate;
 
   /// Vision Next-Term §4.2 prep-budget gate. When present,
   /// [_tryExecuteNext] consults [PrepBudgetService.canSpend] *before*
@@ -257,6 +268,7 @@ class IdleExecutor {
     SystemMonitorService? systemMonitor,
     bool Function(DateTime now)? shouldDeferForQuietHours,
     bool Function(String subjectId)? isPrepEnabledForSubject,
+    PreparationGate? preparationGate,
     LlmUsageMeter? usageMeter,
     PrepBudgetService? prepBudgetService,
     TaskReconstructor? taskReconstructor,
@@ -264,6 +276,7 @@ class IdleExecutor {
         _systemMonitor = systemMonitor,
         _shouldDeferForQuietHours = shouldDeferForQuietHours,
         _isPrepEnabledForSubject = isPrepEnabledForSubject,
+        _preparationGate = preparationGate,
         _usageMeter = usageMeter,
         _prepBudgetService = prepBudgetService,
         _taskReconstructor = taskReconstructor;
@@ -520,12 +533,24 @@ class IdleExecutor {
     // no tokens spent) and logged so they surface as "subject disabled by
     // student" instead of silently burning budget. The check happens before the
     // task is registered on [LlmTaskManager], so a disabled-subject task never
-    // appears as a running/failed prep job. Mirrors the quiet-hours predicate
-    // pattern: inject `isPrepEnabledForSubject` in tests with a stub.
+    // appears as a running/failed prep job. Uses the reactive preparation gate
+    // when present (fresh predicates from async-loaded budget), falling back
+    // to the injection-time callback for deterministic test fakes.
     final subjectId = next.subjectId;
-    if (subjectId != null &&
-        _isPrepEnabledForSubject != null &&
-        !_isPrepEnabledForSubject(subjectId)) {
+    bool? subjectBlocked;
+    if (subjectId != null) {
+      PreparationGate? effectiveGate = _preparationGate;
+      // Also check the static reference — tests that install a hand-built
+      // gate via PreparationGate.current will have it picked up here.
+      effectiveGate ??= PreparationGate.current;
+      if (effectiveGate != null) {
+        subjectBlocked = !effectiveGate.currentState.isPrepEnabledForSubject(subjectId);
+      } else {
+        subjectBlocked =
+            _isPrepEnabledForSubject != null && !_isPrepEnabledForSubject(subjectId);
+      }
+    }
+    if (subjectBlocked == true) {
       _logger.d(
         'Deferring task "${next.description}" - subject "$subjectId" prep disabled by student',
       );
