@@ -475,6 +475,78 @@ directory) throws `StateError`.
 
 ---
 
+## Accessibility: WCAG contrast ratio
+
+### `calculateContrastRatio(foreground, background)`
+
+Returns the WCAG 2.1 contrast ratio between two colours — a value from `1`
+(same colour) to `21` (pure white on pure black). Per WCAG AA, normal text
+requires ≥ 4.5 and large text ≥ 3.0.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_to_image/flutter_to_image.dart';
+
+final ratio = calculateContrastRatio(
+  const Color(0xFF333333), // foreground
+  const Color(0xFFFFFFFF), // background
+);
+print(ratio); // ~14.79 — passes both AA and AAA
+```
+
+Constants are exported for convenience:
+- `kContrastRatioNormalText` — `4.5` (normal text, < 18.6 px)
+- `kContrastRatioLargeText` — `3.0` (large text, ≥ 18.6 px bold or ≥ 24 px regular)
+
+### `isAccessibleAA`, `isAccessibleAAA`
+
+Convenience predicates wrapping the ratio calculation:
+
+```dart
+// Normal text (most UI text):
+if (!isAccessibleAA(Color(0xFFAAAAAA), Color(0xFFF5F5F5))) {
+  print('Foreground/background pair fails WCAG AA — lower contrast needed');
+}
+
+// Large headers:
+if (isAccessibleAAA(headerColor, bgColor)) {
+  print('Header meets AAA — excellent legibility');
+}
+```
+
+Both helpers treat colours as opaque (the alpha channel is ignored) so callers
+can pass any `Color` without worrying about opacity.
+
+### Using contrast checks in golden-matrix tests
+
+Add contrast assertions alongside your pixel-level golden assertions to catch
+low-contrast regressions automatically:
+
+```dart
+testWidgets('DashboardNavCard passes AA contrast in dark theme', (tester) async {
+  // Render the widget in dark theme.
+  final png = await renderWidgetToPng(
+    DashboardNavCard(...),
+    size: const Size(375, 800),
+    themeMode: ThemeMode.dark,
+  );
+  expect(png, isNotEmpty);
+
+  // Assert that the card's main text colour against its background meets WCAG AA.
+  // Use known colours from the widget's ThemeData rather than parsing pixels.
+  final bg = ThemeData.dark().cardColor;
+  final fg = DefaultTextStyle.of(tester.element(find.byType(DashboardNavCard))).style?.color ?? Colors.white;
+  expect(isAccessibleAA(fg!, bg), isTrue,
+    reason: 'Text must meet WCAG AA ≥ 4.5:1 in dark theme',
+  );
+});
+```
+
+The package's own test suite (`packages/flutter_to_image/test/contrast_test.dart`)
+verifies: same-colour yields ratio 1.0, black-on-white yields 21.0, order is
+symmetric, known WCAG test pairs match spec values within tolerance, `isAccessibleAA`
+correctly classifies borderline grey-pairs, and constants equal their expected values.
+
 ## Golden file path convention
 
 ```

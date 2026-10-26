@@ -13,6 +13,7 @@
 /// PNG + diff" artifacts to issues (`docs/vision_next_term.md` §1.1).
 library;
 
+export 'src/contrast.dart';
 export 'src/diff.dart';
 export 'src/file_io.dart';
 export 'src/renderer.dart';
