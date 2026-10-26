@@ -861,6 +861,222 @@ void main() {
         expect(result.data, isNot(contains('Aldol condensation discussion 3')));
         expect(result.data, isNot(contains('Aldol condensation discussion 4')));
       });
+
+      test('keys excerpt search on the current user message when it differs '
+          'from syllabus topics', () async {
+        // The student's upcoming lesson is on SN2, but their question is about
+        // aldol condensation. The proactive RAG step must key on the message so
+        // the mentor can cite the textbook page the student is asking about.
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'chem-1', 'subjectTitle': 'Organic Chemistry'},
+        ]));
+        planner.setScheduledLessons([
+          Session(
+            id: 's1',
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            startTime: DateTime.now().add(const Duration(hours: 2)),
+            tutorMetadata: const TutorMetadata(topicTitle: 'SN2 Mechanisms'),
+          ),
+        ]);
+
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(
+            id: 'chem-textbook',
+            title: 'Organic Chemistry Textbook',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            chunks: jsonEncode([
+              {
+                'chunkIndex': 0,
+                'pageStart': 102,
+                'pageEnd': 105,
+                'text': 'Aldol condensation is a carbon-carbon bond-forming reaction between enolates and carbonyl compounds.',
+                'heading': 'Aldol Condensation',
+              },
+              {
+                'chunkIndex': 1,
+                'pageStart': 200,
+                'pageEnd': 203,
+                'text': 'SN2 reactions proceed through a backside attack mechanism.',
+                'heading': 'SN2',
+              },
+            ]),
+          ),
+        ]);
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          sourceRepository: sourceRepo,
+        );
+        final result = await builder.buildContextPrompt(
+          userMessage: 'What did my textbook say about aldol condensation?',
+        );
+        expect(result.isSuccess, isTrue);
+        // The message-matched chunk (with its page citation) is injected even
+        // though the upcoming-lesson topic ('SN2 Mechanisms') matches the other
+        // chunk — the RAG step surfaces what the student is asking about.
+        expect(result.data, contains('Relevant source excerpts'));
+        expect(result.data, contains('Aldol condensation is a carbon-carbon'));
+        expect(result.data, contains('p.102-105'));
+      });
+
+      test('without a message, excerpts are keyed on syllabus topics only',
+          () async {
+        // Control for the message-keyed RAG step: with no message the syllabus
+        // (upcoming-lesson) query is used, so the aldol chunk on p.102-105 is
+        // NOT injected even though it is in the same source.
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'chem-1', 'subjectTitle': 'Organic Chemistry'},
+        ]));
+        planner.setScheduledLessons([
+          Session(
+            id: 's1',
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            startTime: DateTime.now().add(const Duration(hours: 2)),
+            tutorMetadata: const TutorMetadata(topicTitle: 'SN2 Reactions'),
+          ),
+        ]);
+
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(
+            id: 'chem-textbook',
+            title: 'Organic Chemistry Textbook',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            chunks: jsonEncode([
+              {
+                'chunkIndex': 0,
+                'pageStart': 102,
+                'pageEnd': 105,
+                'text': 'Aldol condensation is a carbon-carbon bond-forming reaction between enolates and carbonyl compounds.',
+                'heading': 'Aldol Condensation',
+              },
+              {
+                'chunkIndex': 1,
+                'pageStart': 200,
+                'pageEnd': 203,
+                'text': 'SN2 reactions proceed through a backside attack mechanism.',
+                'heading': 'SN2',
+              },
+            ]),
+          ),
+        ]);
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          sourceRepository: sourceRepo,
+        );
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Relevant source excerpts'));
+        expect(result.data, contains('SN2 reactions proceed'));
+        expect(result.data, isNot(contains('Aldol condensation is a carbon-carbon')));
+      });
+
+      test('falls back to syllabus-topic queries when the message matches nothing',
+          () async {
+        // A question about an unrelated topic must not break the prompt: the
+        // syllabus-driven excerpt is still injected.
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'chem-1', 'subjectTitle': 'Organic Chemistry'},
+        ]));
+        planner.setScheduledLessons([
+          Session(
+            id: 's1',
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            startTime: DateTime.now().add(const Duration(hours: 2)),
+            tutorMetadata: const TutorMetadata(topicTitle: 'SN2 Reactions'),
+          ),
+        ]);
+
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(
+            id: 'chem-textbook',
+            title: 'Organic Chemistry Textbook',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            chunks: jsonEncode([
+              {
+                'chunkIndex': 0,
+                'pageStart': 102,
+                'pageEnd': 105,
+                'text': 'Aldol condensation is a carbon-carbon bond-forming reaction.',
+              },
+              {
+                'chunkIndex': 1,
+                'pageStart': 200,
+                'pageEnd': 203,
+                'text': 'SN2 reactions proceed through a backside attack mechanism.',
+              },
+            ]),
+          ),
+        ]);
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          sourceRepository: sourceRepo,
+        );
+        final result = await builder.buildContextPrompt(
+          userMessage: 'quantum tunnelling in solid state physics',
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Relevant source excerpts'));
+        expect(result.data, contains('SN2 reactions proceed'));
+        expect(result.data, isNot(contains('quantum')));
+      });
+
+      test('keeps message-keyed excerpts bounded when many terms match', () async {
+        // The message yields several significant terms that each match chunks;
+        // the injected excerpt set must stay capped at 3 regardless.
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'chem-1', 'subjectTitle': 'Organic Chemistry'},
+        ]));
+
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(
+            id: 's1',
+            title: 'Reactions Handbook',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            chunks: jsonEncode(List.generate(6, (i) => {
+                  'chunkIndex': i,
+                  'pageStart': i + 1,
+                  'pageEnd': i + 1,
+                  'text': 'Aldol condensation reaction discussion $i',
+                })),
+          ),
+        ]);
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          sourceRepository: sourceRepo,
+        );
+        final result = await builder.buildContextPrompt(
+          userMessage: 'tell me about aldol condensation reactions',
+        );
+        expect(result.isSuccess, isTrue);
+        // 'aldol' and 'condensation' and 'reactions' all match the same chunks;
+        // dedupe + cap keep the excerpt list at 3.
+        expect(result.data, contains('Relevant source excerpts'));
+        expect(result.data, contains('Aldol condensation reaction discussion 0'));
+        expect(result.data, contains('Aldol condensation reaction discussion 2'));
+        expect(result.data, isNot(contains('Aldol condensation reaction discussion 3')));
+      });
     });
 
     group('missed lessons', () {

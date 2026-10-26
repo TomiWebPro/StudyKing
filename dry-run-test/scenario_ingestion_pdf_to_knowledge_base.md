@@ -14,8 +14,8 @@
 | Step | Expectation | Current code | Status |
 |------|------------|-------------|--------|
 | 1. Student uploads a PDF textbook | The ingestion pipeline should accept the file, extract text, chunk it, and persist as `Source` entries with subject/topic links. | `lib/features/ingestion/` — ingestion exists. `lib/features/mentor/services/tools/ingest_pdf_to_kb_tool.dart:9` — `IngestPdfToKbTool` registered (`llp_agent_providers.dart:107-113`). Calls `LlmService.chat()` for chunk parsing. | PASS |
-| 2. System extracts chunks and links to syllabus topics | After ingestion, each chunk should be linked to the relevant syllabus topic so the mentor can cite it. Topics come from the plan's `SyllabusGoal` list. | `lib/features/ingestion/data/repositories/source_repository.dart` — `Source` model persists ingested content. `lib/features/planner/data/models/personal_learning_plan_model.dart:1` — `SyllabusGoal` lists subjects/topics. `get_syllabus_structure_tool.dart` surfaces structure. | PARTIAL |
-| 3. Mentor can cite the textbook when answering questions | When the student asks "What did my textbook say about aldol condensation?", the mentor should find and quote the relevant chunk. | `lib/features/mentor/services/mentor_context_builder.dart:405-463` — `_getSourceInventory()` and `_appendSourceInventory()` inject uploaded-material titles into the mentor context. `search_sources` tool (`lib/features/mentor/services/tools/search_sources_tool.dart`) and `read_source_content` tool (`lib/features/mentor/services/tools/read_source_content_tool.dart`) are registered and traced through AgentLoop in `tool_trace_coverage_test.dart`. | PASS |
+| 2. System extracts chunks and links to syllabus topics | After ingestion, each chunk should be linked to the relevant syllabus topic so the mentor can cite it. Topics come from the plan's `SyllabusGoal` list. | `lib/features/ingestion/data/repositories/source_repository.dart` — `Source` model persists ingested content (subjectId/topicId/topicConfidence/chunks). `mentor_context_builder.dart:810` — `_appendClassificationConfidence` injects average topic-link confidence. | PASS |
+| 3. Mentor can cite the textbook when answering questions | When the student asks "What did my textbook say about aldol condensation?", the mentor should find and quote the relevant chunk. | `lib/features/mentor/services/mentor_context_builder.dart:179-192` — `_loadSourceExcerpts` (line 904) proactively searches chunks keyed on the **current user message** (full phrase + significant terms, syllabus-topic fallback) and `_appendSourceExcerpts` renders source title + heading + page range + excerpt into the mentor prompt. `search_sources` tool (`lib/features/mentor/services/tools/search_sources_tool.dart`) and `read_source_content` tool are registered and traced through AgentLoop in `tool_trace_coverage_test.dart`. | PASS |
 | 4. System generates lesson blocks from ingested material | After ingestion, the mentor can call `generate_lesson_blocks` to create lesson content from the parsed textbook chunks. | `lib/features/mentor/services/tools/generate_lesson_blocks_tool.dart:6` — registered (`llp_agent_providers.dart:71`). Calls `LessonAgentService.generateLesson()` which calls the LLM. | PASS |
 | 5. Student revisits source content later | A "revisit" view lists all ingested sources with search, so the student can re-read specific textbook sections. | `lib/features/mentor/services/tools/revisit_sources_tool.dart` — `RevisitSourcesTool` registered and traced through AgentLoop in `tool_trace_coverage_test.dart`. Paged, recency-ordered listing with source search via `search_sources` tool. | PASS |
 
@@ -38,13 +38,12 @@
 
 | Context needed | Injected? | File |
 |---|---|---|
-| Uploaded sources list (titles, subjects, sizes) | YES (partial) | `mentor_context_builder.dart:405-463` — `_appendSourceInventory` injects per-syllabus source titles. |
-| Semantic search results across chunks | NO | No retrieval tool feeds search results into the system prompt. |
+| Uploaded sources list (titles, subjects, sizes) | YES (partial) | `mentor_context_builder.dart:760` — `_appendSourceInventory` injects per-syllabus source titles. |
+| Semantic search results across chunks | YES (bounded, message-keyed) | `mentor_context_builder.dart:904-958` — `_loadSourceExcerpts` proactively injects top-3 chunks via `SourceRepository.searchChunks`, keyed on the student's **current message** (full phrase + significant terms) with syllabus-topic fallback; `_appendSourceExcerpts` renders source title + heading + page range + excerpt. |
 | Chunking quality (density of content per chunk) | NO | `ingestion-pdf-figures-dropped-no-chart-tool.md` — figures are dropped; no per-chunk quality signal. |
-| Source-topic link confidence | NO | Ingestion does not score confidence of topic assignment; the mentor sees titles only. |
+| Source-topic link confidence | YES (partial) | `mentor_context_builder.dart:810` — `_appendClassificationConfidence` injects average classification confidence for linked sources. |
 
-**Gap:** No semantic search context — the mentor cannot cite specific textbook content proactively.
-→ File `issues/open/scenario-ingestion-search-context-gap.md`
+**Gap:** Chunking quality remains unscored (figures dropped). Semantic search context is now injected proactively (message-keyed RAG), so the mentor can cite specific textbook content without waiting for a `search_sources` tool round-trip.
 
 ## Comprehension rubric
 
@@ -58,17 +57,18 @@
 
 Traced against code at:
 `lib/features/mentor/services/tools/ingest_pdf_to_kb_tool.dart:9-60`,
-`lib/features/mentor/services/mentor_context_builder.dart:405-463`,
+`lib/features/mentor/services/mentor_context_builder.dart:179-192,760,810,904-985`,
+`lib/features/mentor/services/mentor_service.dart:218,266`,
 `lib/features/mentor/services/tools/generate_lesson_blocks_tool.dart:6`,
 `lib/features/ingestion/data/repositories/source_repository.dart`.
 
 - Step 1: PASS — `IngestPdfToKbTool` is registered and callable.
-- Step 2: PARTIAL — source-topic linking exists but confidence is not scored.
-- Step 3: PASS — `search_sources` and `read_source_content` tools are registered and traced through AgentLoop.
+- Step 2: PASS — chunks persist with subject/topic links; classification confidence is surfaced (`_appendClassificationConfidence`).
+- Step 3: PASS — `search_sources` and `read_source_content` tools are registered and traced through AgentLoop; proactive message-keyed RAG injects relevant chunk excerpts + page citations directly into the mentor prompt (`buildContextPrompt(userMessage:)`, `_loadSourceExcerpts`).
 - Step 4: PASS — `GenerateLessonBlocksTool` is reachable through AgentLoop.
 - Step 5: PASS — `revisit_sources` tool provides paged, recency-ordered listing.
 
 Tool audit: all 5 needed tools exist and are traced (ingest_pdf_to_kb, get_syllabus_structure, search_sources, read_source_content, revisit_sources, generate_lesson_blocks).
 RESULT: all needed tools available (0 missing).
-Context audit: source content search now available via agent tools; chunking quality and source-topic link confidence not yet scored → open issue (`scenario-ingestion-search-context-gap.md`).
-**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `tool_trace_coverage_test.dart`, `ingest_pdf_to_kb_tool.dart:9`).
+Context audit: source content now injected proactively via message-keyed RAG (`_loadSourceExcerpts` — top-3 chunks keyed on the current user message + chunk page/heading provenance); classification confidence injected (`_appendClassificationConfidence`). Remaining context gap: chunking quality unscored (`ingestion-pdf-figures-dropped-no-chart-tool.md`).
+**Last re-traced:** 2026-10-26 against commit `dad0a34` (`tool_trace_coverage_test.dart`, `mentor_context_builder.dart:904-985`, `mentor_service.dart:218,266` — message passed into `buildContextPrompt`).

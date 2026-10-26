@@ -215,7 +215,9 @@ class MentorService {
     final emptyStartContext = isEmptyUser ? _buildEmptyStartContext() : '';
 
     if (_agent != null) {
-      final contextResult = await _contextBuilder.buildContextPrompt();
+      final contextResult = await _contextBuilder.buildContextPrompt(
+        userMessage: message,
+      );
       if (contextResult.isFailure) {
         _logger.w('Failed to build mentor context: ${contextResult.error}');
       }
@@ -263,7 +265,9 @@ class MentorService {
       return;
     }
 
-    final contextResult2 = await _contextBuilder.buildContextPrompt();
+    final contextResult2 = await _contextBuilder.buildContextPrompt(
+      userMessage: message,
+    );
     if (contextResult2.isFailure) {
       _logger.w('Failed to build mentor context: ${contextResult2.error}');
     }

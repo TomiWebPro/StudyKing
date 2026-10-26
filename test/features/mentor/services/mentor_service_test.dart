@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -22,6 +25,7 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -89,6 +93,20 @@ class FakeSubjectRepository extends SubjectRepository {
       return Result.failure('Simulated subject read failure');
     }
     return Result.success(_subjects);
+  }
+}
+
+/// Hand-written fake [SourceRepository] serving an in-memory source list (no
+/// Hive I/O). The real `searchChunks` implementation runs on top of
+/// `getByStudent` so the mentor RAG path is exercised honestly.
+class FakeSourceRepository extends SourceRepository {
+  List<Source> _sources = [];
+
+  void setSources(List<Source> sources) => _sources = sources;
+
+  @override
+  Future<Result<List<Source>>> getByStudent(String studentId) async {
+    return Result.success(_sources);
   }
 }
 
@@ -313,6 +331,7 @@ MentorService createMentorService({
   PlannerService? plannerService,
   EngagementNudgeRepository? nudgeRepo,
   SessionRepository? sessionRepository,
+  SourceRepository? sourceRepository,
   LongTermMemory? longTermMemory,
   LlmAgent? agent,
   String modelId = 'test-model',
@@ -345,6 +364,7 @@ MentorService createMentorService({
     plannerService: plannerService ?? FakePlannerService(),
     nudgeRepo: nudgeRepo ?? _FakeNudgeRepo(),
     sessionRepository: sessionRepository ?? _FakeSessionRepo(),
+    sourceRepository: sourceRepository,
     modelId: modelId,
     studentId: studentId,
     localeName: localeName,
@@ -1112,6 +1132,46 @@ void main() {
         await service.chat('hello').toList();
         expect(llm.capturedMessage, contains('Total attempts: 15'));
         expect(llm.capturedMessage, contains('Student: hello'));
+      });
+
+      test('keys proactive source excerpts on the current student message',
+          () async {
+        // Vision Next-Term §3.1 (scenario_ingestion_pdf_to_knowledge_base):
+        // the student's question drives the RAG step — the utterance passes
+        // into buildContextPrompt, whose excerpt search injects the relevant
+        // textbook chunk into the LLM prompt before the mentor replies.
+        final llm = FakeLlmService();
+        final sourceRepo = FakeSourceRepository();
+        sourceRepo.setSources([
+          Source(
+            id: 'chem-textbook',
+            title: 'Organic Chemistry Textbook',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            chunks: jsonEncode([
+              {
+                'chunkIndex': 0,
+                'pageStart': 102,
+                'pageEnd': 105,
+                'text': 'Aldol condensation is a carbon-carbon bond-forming reaction between enolates and carbonyl compounds.',
+                'heading': 'Aldol Condensation',
+              },
+            ]),
+          ),
+        ]);
+        final service = createMentorService(
+          llmService: llm,
+          sourceRepository: sourceRepo,
+        );
+        // hasMeaningfulData() sees the uploaded material → non-agent fallback
+        // path → FakeLlmService captures the composed full prompt.
+        await service
+            .chat('What did my textbook say about aldol condensation?')
+            .toList();
+        expect(llm.capturedMessage, contains('Relevant source excerpts'));
+        expect(llm.capturedMessage, contains('Aldol condensation is a carbon-carbon'));
+        expect(llm.capturedMessage, contains('p.102-105'));
       });
 
       test('includes accuracy and topics studied in prompt', () async {

@@ -8,6 +8,7 @@ import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/core/utils/date_utils.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
@@ -132,7 +133,7 @@ class MentorContextBuilder {
   /// reasoning from metadata alone (Vision Next-Term §3.1 / §4.1).
   static const int _maxSourceExcerpts = 3;
 
-  Future<Result<String>> buildContextPrompt() async {
+  Future<Result<String>> buildContextPrompt({String? userMessage}) async {
     try {
       final statsResult = await _progressTracker.getOverallStats(_plannerService.studentId);
     final stats = statsResult.data ?? <String, dynamic>{};
@@ -179,12 +180,14 @@ class MentorContextBuilder {
 
         // Vision Next-Term §3.1 / §4.1 (scenario_ingestion_pdf_to_knowledge_base
         // Step 3): proactively inject bounded chunk excerpts relevant to the
-        // student's active syllabus topics so the LLM can cite textbook content
-        // ("What did my textbook say about X?") instead of guessing from
-        // metadata. Best-effort: a search failure leaves the prompt unchanged.
+        // student's active syllabus topics AND their current message so the LLM
+        // can cite textbook content ("What did my textbook say about X?")
+        // instead of guessing from metadata. Best-effort: a search failure
+        // leaves the prompt unchanged.
         final sourceExcerpts = await _loadSourceExcerpts(
           syllabusGoals,
           upcomingLessons,
+          userMessage: userMessage,
         );
         _appendSourceExcerpts(buffer, sourceExcerpts, bullet);
       }
@@ -829,39 +832,103 @@ class MentorContextBuilder {
     buffer.writeln('$bullet Source-topic classification confidence: $count sources classified, avg $avgPct');
   }
 
+  /// Upper bound on the number of significant terms extracted from the
+  /// student's current message for proactive chunk search (bounds the number
+  /// of repository calls per mentor turn).
+  static const int _maxMessageTerms = 5;
+
+  /// Common English question/function words dropped when turning the student's
+  /// message into chunk-search terms. Proactive RAG context lines are
+  /// en-invariant per AGENTS.md i18n convention (prompt text may stay in 'en'),
+  /// so an English stopword set is sufficient for the default UI language.
+  static const Set<String> _searchStopwords = {
+    // question words
+    'what', 'which', 'when', 'where', 'why', 'how', 'who', 'whose',
+    'did', 'does', 'do', 'would', 'could', 'should', 'will', 'can', 'may', 'might',
+    // auxiliaries / copulas
+    'is', 'are', 'was', 'were', 'am', 'be', 'been', 'being', 'have', 'has', 'had',
+    // articles / demonstratives / pronouns
+    'the', 'a', 'an', 'this', 'that', 'these', 'those', 'my', 'your', 'our',
+    'their', 'his', 'her', 'its', 'me', 'you', 'we', 'they', 'us', 'it', 'i',
+    // prepositions / conjunctions
+    'about', 'with', 'from', 'into', 'onto', 'over', 'under', 'for', 'of', 'to',
+    'at', 'on', 'by', 'in', 'and', 'or', 'but', 'so', 'if', 'then', 'than', 'not', 'no',
+    // generic ask/study verbs and filler — not topic-specific, add no signal
+    'please', 'say', 'said', 'tell', 'explain', 'teach', 'learn', 'study', 'review',
+    'revision', 'want', 'need', 'give', 'show', 'find', 'know', 'think', 'mean',
+    'understand', 'talk', 'cover', 'like', 'really', 'just', 'also', 'very', 'well',
+    // document-generic words — describe the medium, not the topic
+    'textbook', 'book', 'books', 'chapter', 'chapters', 'page', 'pages',
+    'notes', 'materials', 'material', 'content', 'source', 'sources',
+    'section', 'sections', 'syllabus', 'upload', 'uploaded', 'uploading',
+  };
+
+  /// Builds chunk-search queries from the student's current message:
+  /// the full phrase first (best when the chunk mirrors the student's wording),
+  /// then the message's significant terms so natural-language questions still
+  /// hit chunks that share vocabulary without the exact phrase.
+  /// Returns an empty list when the message is absent or blank, so the caller
+  /// falls back to syllabus-topic queries (existing behaviour).
+  List<String> _messageSearchQueries(String? userMessage) {
+    if (userMessage == null) return const [];
+    final trimmed = userMessage.trim();
+    if (trimmed.isEmpty) return const [];
+    final terms = trimmed
+        .normalized
+        .split(RegExp(r'[^a-z0-9]+'))
+        .where((t) => t.length >= 4 && !_searchStopwords.contains(t))
+        .toList();
+    final unique = <String>[];
+    for (final term in terms) {
+      if (!unique.contains(term)) unique.add(term);
+      if (unique.length >= _maxMessageTerms) break;
+    }
+    return [trimmed, ...unique];
+  }
+
   /// Proactively fetches bounded chunk excerpts from the student's ingested
-  /// sources that are relevant to the **active syllabus topics** — upcoming
-  /// lesson topic titles, falling back to syllabus-goal subject titles.
+  /// sources that are relevant to the **current user message**, falling back
+  /// to the **active syllabus topics** — upcoming lesson topic titles, then
+  /// syllabus-goal subject titles.
   ///
   /// Vision Next-Term §3.1 / §4.1 (scenario_ingestion_pdf_to_knowledge_base
   /// Step 3): "When the student asks 'What did my textbook say about X?', the
-  /// mentor should find and quote the relevant chunk." Injecting the excerpt
-  /// directly into the system prompt lets the LLM ground answers without a
-  /// separate tool round-trip.
+  /// mentor should find and quote the relevant chunk." Keying the search on
+  /// the message itself (a lightweight RAG step) means the excerpts injected
+  /// into the system prompt match what the student is currently asking about,
+  /// so the LLM can ground answers without a separate tool round-trip and
+  /// keeps continuity across follow-up questions.
   ///
   /// Best-effort: returns an empty list when the repository is unavailable or
   /// the search yields no matches, so the prompt is never broken.
   Future<List<SourceChunkSearchMatch>> _loadSourceExcerpts(
     List<SyllabusGoal> syllabusGoals,
-    List<Session> upcomingLessons,
-  ) async {
+    List<Session> upcomingLessons, {
+    String? userMessage,
+  }) async {
     final sourceRepo = _sourceRepository;
     if (sourceRepo == null) return const [];
 
-    // Build search queries from the student's active syllabus topics.
+    // RAG on the student's CURRENT message first — the full phrase, then its
+    // significant terms so natural-language questions still hit chunks that
+    // share vocabulary without the exact phrasing.
+    final queries = <String>[..._messageSearchQueries(userMessage)];
+
+    // Then build search queries from the student's active syllabus topics.
     // Upcoming lesson topic titles are the most specific "active" topics;
     // fall back to syllabus-goal subject titles when there are no upcoming
     // lessons on a known topic.
-    final queries = <String>[];
+    final syllabusQueries = <String>[];
     for (final lesson in upcomingLessons) {
       final title = lesson.tutorMetadata?.topicTitle;
-      if (title != null && title.isNotEmpty) queries.add(title);
+      if (title != null && title.isNotEmpty) syllabusQueries.add(title);
     }
-    if (queries.isEmpty) {
+    if (syllabusQueries.isEmpty) {
       for (final goal in syllabusGoals) {
-        if (goal.subjectTitle.isNotEmpty) queries.add(goal.subjectTitle);
+        if (goal.subjectTitle.isNotEmpty) syllabusQueries.add(goal.subjectTitle);
       }
     }
+    queries.addAll(syllabusQueries);
     if (queries.isEmpty) return const [];
 
     final studentId = _plannerService.studentId;
