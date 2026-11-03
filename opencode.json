@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "commandcode/qwen3.7-flash",
+  "model": "goaichat/kimi-k3",
   "references": {
     "docs": {
       "path": "./docs",
