@@ -170,6 +170,50 @@ void main() {
       expect(client.callCount, 0);
     });
 
+    test('chat with empty API key proceeds for keyless Ollama provider', () async {
+      final config = const LlmConfiguration(
+        provider: LlmProvider.ollama,
+        apiKey: '',
+      );
+      final client = _FakeHttpClient();
+      client.responseBody = {
+        'message': {'content': 'Ollama says hi'},
+      };
+      final service = LlmService(config: config, httpClient: client);
+
+      final result = await service.chat(
+        message: 'Hi',
+        modelId: 'llama3',
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data, 'Ollama says hi');
+      expect(client.callCount, 1);
+      expect(client.lastUrl, contains('/api/chat'));
+    });
+
+    test('chatStream with empty API key proceeds for keyless Ollama provider',
+        () async {
+      final config = const LlmConfiguration(
+        provider: LlmProvider.ollama,
+        apiKey: '',
+      );
+      final client = _FakeHttpClient();
+      client.responseBody = {
+        'message': {'content': 'Hello'},
+        'done': true,
+      };
+      final service = LlmService(config: config, httpClient: client);
+
+      final chunks = await service.chatStream(
+        message: 'Hi',
+        modelId: 'llama3',
+      ).toList();
+
+      expect(chunks.join(), contains('Hello'));
+      expect(client.callCount, 1);
+    });
+
     test('chat with OpenRouter calls API and returns content', () async {
       final config = const LlmConfiguration(
         provider: LlmProvider.openRouter,

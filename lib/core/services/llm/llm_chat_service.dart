@@ -538,7 +538,11 @@ class LlmService {
     String? taskType,
     String? sessionId,
   }) async {
-    if (config.apiKey.isEmpty) {
+    // Keyless local providers (Ollama) need no API key: _callOllama sends
+    // no Authorization header, so the fail-fast below applies only to cloud
+    // providers (agent_must_read.md local-first + offline support;
+    // dry-run scenario_new_user_learn_chemistry step 3).
+    if (config.apiKey.isEmpty && config.provider != LlmProvider.ollama) {
       return Result.failure('API key is empty');
     }
     if (modelId.isEmpty) {
@@ -612,7 +616,9 @@ class LlmService {
     String? taskType,
     String? sessionId,
   }) async* {
-    if (config.apiKey.isEmpty) {
+    // Mirrors chat(): keyless local providers (Ollama) stay usable without
+    // a key; cloud providers still surface the setup prompt.
+    if (config.apiKey.isEmpty && config.provider != LlmProvider.ollama) {
       yield 'API key not configured. Please set up an API key in Settings to use AI features.';
       return;
     }

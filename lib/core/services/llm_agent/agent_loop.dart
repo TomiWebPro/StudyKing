@@ -69,7 +69,7 @@ class AgentLoop {
     // aggregate token counts from the LLM service's per-call tasks after
     // the loop finishes (they share the same [LlmTaskManager]).
     final preRunTaskIds = _taskManager != null
-        ? Set<String>.from(_taskManager!.tasks.map((t) => t.id))
+        ? Set<String>.from(_taskManager.tasks.map((t) => t.id))
         : const <String>{};
 
     final messages = <Map<String, String>>[];
@@ -184,7 +184,7 @@ class AgentLoop {
       var totalTokens = 0;
       var totalCost = 0.0;
       if (_taskManager != null) {
-        for (final t in _taskManager!.tasks) {
+        for (final t in _taskManager.tasks) {
           if (preRunTaskIds.contains(t.id) || t.id == taskId) continue;
           totalTokens += t.tokensUsed;
           totalCost += t.estimatedCost;
@@ -244,7 +244,7 @@ class AgentLoop {
     _taskManager?.startTask(taskId);
 
     final preRunTaskIds = _taskManager != null
-        ? Set<String>.from(_taskManager!.tasks.map((t) => t.id))
+        ? Set<String>.from(_taskManager.tasks.map((t) => t.id))
         : const <String>{};
 
     final messages = <Map<String, String>>[];
@@ -407,7 +407,7 @@ class AgentLoop {
       var totalTokens = 0;
       var totalCost = 0.0;
       if (_taskManager != null) {
-        for (final t in _taskManager!.tasks) {
+        for (final t in _taskManager.tasks) {
           if (preRunTaskIds.contains(t.id) || t.id == taskId) continue;
           totalTokens += t.tokensUsed;
           totalCost += t.estimatedCost;
@@ -422,7 +422,7 @@ class AgentLoop {
     } catch (e) {
       _logger.w('Agent loop stream error', e);
       if (_taskManager != null) {
-        _taskManager!.failTask(taskId, e.toString());
+        _taskManager.failTask(taskId, e.toString());
       }
       yield 'An error occurred during processing.';
     }

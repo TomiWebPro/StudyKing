@@ -30,7 +30,6 @@ import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/features/mentor/services/tools/create_plan_tool.dart';
 import 'package:studyking/features/mentor/services/tools/schedule_lesson_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_weak_topics_tool.dart';
 import 'package:studyking/features/mentor/services/tools/switch_syllabus_focus_tool.dart';
@@ -42,14 +41,11 @@ import 'package:studyking/features/mentor/services/tools/read_source_content_too
 import 'package:studyking/features/mentor/services/tools/revisit_sources_tool.dart';
 import 'package:studyking/features/mentor/services/tools/review_mistakes_tool.dart';
 import 'package:studyking/features/mentor/services/tools/enqueue_question_variants_tool.dart';
-import 'package:studyking/features/mentor/services/tools/create_practice_session_tool.dart';
 import 'package:studyking/features/questions/services/question_variant_service.dart';
 import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
-import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/l10n/generated/app_localizations.dart';
 
 import '../../helpers/hive_init_helper.dart';
 import '../../helpers/fakes.dart';
@@ -156,7 +152,7 @@ class ScenarioResult {
   });
 
   /// Build a trace summary suitable for print/expect.
-  static String buildTrace(List<_TraceStep> steps) {
+  static String _buildTrace(List<_TraceStep> steps) {
     final buffer = StringBuffer();
     buffer.writeln('CHECK: TRACE');
     for (var i = 0; i < steps.length; i++) {
@@ -231,7 +227,7 @@ Future<ScenarioResult> runScenario({
     }
   }
 
-  final trace = ScenarioResult.buildTrace(traceSteps);
+  final trace = ScenarioResult._buildTrace(traceSteps);
 
   // Build tool audit manually since we can't access ToolRegistry internals.
   final auditBuffer = StringBuffer();

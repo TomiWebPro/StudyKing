@@ -24,31 +24,35 @@ class DailyPlansSection extends ConsumerWidget {
 
     return FocusTraversalGroup(
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(l10n.yourStudySchedule,
               style: Theme.of(context).textTheme.titleLarge),
           SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
-          Expanded(
-            child: ListView.builder(
-              itemCount: state.plan!.dailyPlans.length,
-              itemBuilder: (context, index) {
-                final day = state.plan!.dailyPlans[index];
-                return DailyPlanCard(
-                  key: ValueKey('daily_plan_${day.dayNumber}'),
-                  day: day,
-                  onStartTutoring: (topicId, topicTitle, subjectId) {
-                    onStartTutoring(
-                      topicId, topicTitle, subjectId,
-                    );
-                  },
-                  onScheduleLesson: onScheduleLesson,
-                  onCatchUp: !day.isCompleted && day.date.isBefore(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day))
-                      ? () => _showCatchUpSheet(context, ref, l10n, state)
-                      : null,
-                );
-              },
-            ),
+          // NOTE: this section lives inside the study-plan tab's scrollable
+          // Column (unbounded height), so it must NOT use Expanded. The
+          // list shrink-wraps and the parent scrolls instead.
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: state.plan!.dailyPlans.length,
+            itemBuilder: (context, index) {
+              final day = state.plan!.dailyPlans[index];
+              return DailyPlanCard(
+                key: ValueKey('daily_plan_${day.dayNumber}'),
+                day: day,
+                onStartTutoring: (topicId, topicTitle, subjectId) {
+                  onStartTutoring(
+                    topicId, topicTitle, subjectId,
+                  );
+                },
+                onScheduleLesson: onScheduleLesson,
+                onCatchUp: !day.isCompleted && day.date.isBefore(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day))
+                    ? () => _showCatchUpSheet(context, ref, l10n, state)
+                    : null,
+              );
+            },
           ),
         ],
       ),

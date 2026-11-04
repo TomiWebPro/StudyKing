@@ -52,7 +52,7 @@ class LessonAgentService {
     // Snapshot task IDs before the call so we can aggregate tokens from
     // the LLM service's per-call task after it completes.
     final preRunIds = _taskManager != null
-        ? Set<String>.from(_taskManager!.tasks.map((t) => t.id))
+        ? Set<String>.from(_taskManager.tasks.map((t) => t.id))
         : const <String>{};
 
     try {
@@ -82,7 +82,7 @@ class LessonAgentService {
       var totalTokens = 0;
       var totalCost = 0.0;
       if (_taskManager != null) {
-        for (final t in _taskManager!.tasks) {
+        for (final t in _taskManager.tasks) {
           if (preRunIds.contains(t.id) || t.id == taskId) continue;
           totalTokens += t.tokensUsed;
           totalCost += t.estimatedCost;

@@ -336,7 +336,14 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
   final systemMonitor = ref.watch(systemMonitorServiceProvider);
   final prepBudget = ref.watch(prepBudgetSettingsProvider);
 
-  if (llmService.config.apiKey.isEmpty) return null;
+  // Keyless local providers (Ollama) build an agent without an API key so
+  // offline/local-first students still reach CreatePlanTool and the mentor
+  // loop (dry-run scenario_new_user_learn_chemistry step 3). Cloud providers
+  // still require a key.
+  if (llmService.config.apiKey.isEmpty &&
+      llmService.config.provider != LlmProvider.ollama) {
+    return null;
+  }
 
   final taskManager = ref.watch(llmTaskManagerProvider);
   final usageMeter = ref.watch(llmUsageMeterProvider);

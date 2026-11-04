@@ -156,6 +156,7 @@ Future<void> _drainBudgetLoad() async {
 
 ProviderContainer _createContainer({
   String apiKey = '',
+  LlmProvider provider = LlmProvider.openRouter,
 }) {
   final mastery = _buildMasteryGraphService();
   return ProviderContainer(
@@ -170,7 +171,7 @@ ProviderContainer _createContainer({
       llmServiceProvider.overrideWith(
         (ref) => LlmService(
           config: LlmConfiguration(
-            provider: LlmProvider.openRouter,
+            provider: provider,
             apiKey: apiKey,
           ),
         ),
@@ -354,6 +355,19 @@ void main() {
       final agent = container.read(llmAgentProvider('student-1'));
       await _drainBudgetLoad();
       expect(agent, isNull);
+    });
+
+    test('returns LlmAgent for keyless Ollama provider with empty apiKey',
+        () async {
+      final container = _createContainer(
+        apiKey: '',
+        provider: LlmProvider.ollama,
+      );
+      addTearDown(() => container.dispose());
+
+      final agent = container.read(llmAgentProvider('student-1'));
+      await _drainBudgetLoad();
+      expect(agent, isA<LlmAgent>());
     });
 
     test('returns LlmAgent when apiKey is provided', () async {
